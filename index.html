@@ -855,6 +855,12 @@ var state = { mode: 'dp', rawData: null, headers: [], importFileName: null, impo
 var _accRecords = [], _accFiles = [];
 
 // ===== HELPERS =====
+function loadSettings() {
+  try { var s = localStorage.getItem('dp_tool_settings'); return s ? JSON.parse(s) : {}; } catch(e) { return {}; }
+}
+function saveSettings(obj) {
+  try { var cur = loadSettings(); Object.assign(cur, obj); localStorage.setItem('dp_tool_settings', JSON.stringify(cur)); } catch(e) {}
+}
 function showToast(msg, type) {
   var t = document.createElement('div'); t.className = 'toast ' + (type||'info'); t.textContent = msg;
   document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 3000);
