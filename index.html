@@ -817,10 +817,11 @@ table tbody tr:last-child td { border-bottom: none; }
     <div class="card-title"><span class="icon icon-purple">💬</span> AI 市场分析助手 <span style="background:#7c3aed;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">v4.5</span> <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">基于导入数据 + AI大模型 · 填好API后点💾保存→发送</span></div>
     <div style="margin-bottom:12px;">
       <div class="form-row">
-        <div class="form-group"><label>API地址</label><input type="text" id="chatApiUrl" placeholder="https://api.openai.com/v1/chat/completions"></div>
-        <div class="form-group"><label>API Key</label><input type="password" id="chatApiKey" placeholder="sk-..."></div>
+        <div class="form-group"><label>API地址</label><input type="text" id="chatApiUrl" placeholder="https://api.openai.com/v1/chat/completions" oninput="document.getElementById('apiUrlHint').textContent='当前: '+(this.value||'(空)').substring(0,40)"></div>
+        <div class="form-group"><label>API Key</label><input type="password" id="chatApiKey" placeholder="sk-..." oninput="document.getElementById('apiKeyHint').textContent='当前: '+(this.value?'已填('+this.value.length+'字符)':'(空)')"></div>
         <div class="form-group" style="flex:0 0 120px;"><label>模型</label><input type="text" id="chatModel" value="gpt-4o"></div>
         <div class="form-group" style="justify-content:flex-end;"><label>&nbsp;</label><button class="btn btn-outline btn-sm" onclick="saveChatConfig()">💾 保存配置</button></div>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;"><span id="apiUrlHint"></span> <span id="apiKeyHint" style="margin-left:12px;"></span></div>
       </div>
     </div>
     <div class="chat-messages" id="chatMessages">
