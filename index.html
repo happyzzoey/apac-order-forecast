@@ -1240,10 +1240,15 @@ function saveChatConfig() {
 }
 
 function loadChatSettings() {
-  var s = loadSettings();
-  if (s.apiUrl) document.getElementById('chatApiUrl').value = s.apiUrl;
-  if (s.apiKey) document.getElementById('chatApiKey').value = s.apiKey;
-  if (s.aiModel) document.getElementById('chatModel').value = s.aiModel;
+  try {
+    var s = loadSettings();
+    var urlEl = document.getElementById('chatApiUrl');
+    var keyEl = document.getElementById('chatApiKey');
+    var modelEl = document.getElementById('chatModel');
+    if (urlEl && s.apiUrl) urlEl.value = s.apiUrl;
+    if (keyEl && s.apiKey) keyEl.value = s.apiKey;
+    if (modelEl && s.aiModel) modelEl.value = s.aiModel;
+  } catch(e) { console.warn('loadChatSettings:', e); }
 }
 
 function saveChatSettings() {
@@ -1389,9 +1394,6 @@ function askQuick(type) {
 }
 
 
-loadChatSettings();
-
-
 // ===== MODE SWITCH =====
 function switchMode(mode) {
   document.querySelectorAll('.mode-btn').forEach(function(b) {
@@ -1407,9 +1409,8 @@ function switchMode(mode) {
   if (mode === 'chat') loadChatSettings();
 }
 
-loadChatSettings();
-
 // ===== INIT =====
+loadChatSettings();
 document.getElementById('fileInput').addEventListener('change', handleFileSelect);
 var iz = document.getElementById('importZone');
 if (iz) {
