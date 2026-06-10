@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>APAC DP需求预测 & AI分析工具</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --primary-light: #dbeafe;
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --border: #e2e8f0;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  --radius: 12px;
+  --transition: 0.2s ease;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ===== HEADER ===== */
+.header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #3b82f6 100%);
+  color: white;
+  padding: 24px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+}
+
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 42px;
+  height: 42px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.logo h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.logo span {
+  font-size: 13px;
+  opacity: 0.8;
+  font-weight: 400;
+}
+
+/* Mode Toggle */
+.mode-toggle {
+  display: flex;
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.mode-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  background: transparent;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.mode-btn.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.mode-btn:hover:not(.active) {
+  color: white;
+}
+
+/* ===== CONTAINER ===== */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+.card:hover { box-shadow: var(--shadow-lg); }
+
+.card-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+
+.card-title .icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.icon-blue { background: #dbeafe; color: #2563eb; }
+.icon-green { background: #d1fae5; color: #059669; }
+.icon-purple { background: #ede9fe; color: #7c3aed; }
+.icon-orange { background: #fff7ed; color: #ea580c; }
+.icon-red { background: #fee2e2; color: #dc2626; }
+
+/* ===== IMPORT ZONE ===== */
+.import-zone {
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--radius);
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  background: #f8fafc;
+}
+
+.import-zone:hover, .import-zone.drag-over {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.import-zone .import-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.import-zone h3 {
+  font-size: 16px;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.import-zone p {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.import-zone input[type="file"] { display: none; }
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #166534;
+}
+
+/* ===== FORM ELEMENTS ===== */
+.form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 150px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group select,
+.form-group input {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #f8fafc;
+  transition: var(--transition);
+  color: var(--text);
+}
+
+.form-group select:focus,
+.form-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  background: white;
+}
+
+.btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.btn-primary:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
+
+.btn-success {
+  background: var(--success);
+  color: white;
+}
+
+.btn-success:hover { background: #059669; transform: translateY(-1px); }
+
+.btn-outline {
+  background: white;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+}
+
+.btn-outline:hover { background: var(--primary-light); }
+
+.btn-sm { padding: 6px 14px; font-size: 13px; }
+
+/* ===== TABLE ===== */
+.table-wrapper {
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table th, table td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+table th {
+  background: #f8fafc;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+table tbody tr:hover { background: #f8fafc; }
+
+table tbody tr:last-child td { border-bottom: none; }
+
+.col-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.col-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: white;
+  transition: var(--transition);
+}
+
+.col-chip:hover { border-color: var(--primary); }
+.col-chip.selected-date { background: #dbeafe; border-color: #2563eb; color: #2563eb; }
+.col-chip.selected-value { background: #d1fae5; border-color: #059669; color: #059669; }
+.col-chip.numeric { color: var(--text-secondary); }
+
+/* ===== METRICS ===== */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.metric-card {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.metric-card .metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.metric-card .metric-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* ===== CHART ===== */
+.chart-container {
+  position: relative;
+  height: 380px;
+  width: 100%;
+}
+
+/* ===== AI CONFIG ===== */
+.ai-config {
+  display: none;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-top: 8px;
+}
+
+.ai-config.show { display: block; }
+
+.ai-config .form-row { margin-bottom: 8px; }
+.ai-config .form-row:last-child { margin-bottom: 0; }
+
+.api-status {
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.api-status.success { background: #d1fae5; color: #065f46; }
+.api-status.error { background: #fee2e2; color: #991b1b; }
+.api-status.loading { background: #dbeafe; color: #1e40af; }
+
+/* ===== PREDICTION RESULTS ===== */
+.prediction-highlight {
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  border: 2px solid #93c5fd;
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-top: 16px;
+}
+
+.prediction-highlight h3 {
+  font-size: 15px;
+  margin-bottom: 12px;
+  color: var(--primary-dark);
+}
+
+.prediction-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.prediction-item {
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.prediction-item .period {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.prediction-item .value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.prediction-item .change {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.change-up { color: #059669; }
+.change-down { color: #dc2626; }
+
+/* ===== TABS CONTENT ===== */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  padding: 14px 20px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 999;
+  animation: slideIn 0.3s ease;
+  box-shadow: var(--shadow-lg);
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+.toast.info { background: #2563eb; }
+
+/* ===== FOOTER ===== */
+.footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .header-inner { flex-direction: column; text-align: center; }
+  .form-row { flex-direction: column; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .prediction-list { grid-template-columns: repeat(2, 1fr); }
+  .card { padding: 16px; }
+  .chart-container { height: 280px; }
+}
+
+/* ===== AI CHAT ===== */
+.chat-card {
+  margin-bottom: 20px;
+}
+
+.chat-messages {
+  height: 400px;
+  overflow-y: auto;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-msg {
+  display: flex;
+  gap: 10px;
+  max-width: 85%;
+  animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-msg.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.chat-msg.ai {
+  align-self: flex-start;
+}
+
+.chat-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.chat-msg.user .chat-avatar { background: #dbeafe; }
+.chat-msg.ai .chat-avatar { background: #ede9fe; }
+
+.chat-bubble {
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-msg.user .chat-bubble {
+  background: var(--primary);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-msg.ai .chat-bubble {
+  background: white;
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+
+.chat-bubble p { margin: 0 0 8px 0; }
+.chat-bubble p:last-child { margin: 0; }
+.chat-bubble ul, .chat-bubble ol { margin: 6px 0; padding-left: 20px; }
+.chat-bubble li { margin: 2px 0; }
+.chat-bubble strong { color: var(--primary-dark); }
+.chat-bubble code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.chat-input-row input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: var(--transition);
+}
+
+.chat-input-row input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+
+.chat-input-row button {
+  padding: 10px 20px;
+  border-radius: 24px;
+  border: none;
+  background: var(--primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.chat-input-row button:hover { background: var(--primary-dark); }
+.chat-input-row button:disabled { background: #94a3b8; cursor: not-allowed; }
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.chat-placeholder {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px;
+  font-size: 14px;
+}
+
+.chat-placeholder .icon { font-size: 48px; margin-bottom: 12px; }
+
+.chat-quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.chat-quick-btn {
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: white;
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  color: var(--text);
+}
+
+.chat-quick-btn:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+/* HIDDEN CLASS */
+.hidden { display: none !important; }
+
+.filter-input { width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; background:#f8fafc; color:var(--text); }
+.filter-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(37,99,235,0.1); background:white; }
+.filter-input::placeholder { color:#94a3b8; }
+
+/* Sticky first column */
+#resultTable th:first-child, #resultTable td:first-child { position: sticky; left: 0; z-index: 2; min-width: 100px; box-shadow: 2px 0 4px rgba(0,0,0,0.05); }
+#resultTable thead th:first-child { z-index: 4; }
+#resultTable tbody td:first-child { background: inherit; }
+
+
+/* Chat */
+.chat-messages { height: 400px; overflow-y: auto; padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+.chat-msg { display: flex; gap: 8px; max-width: 90%; animation: fadeIn .3s; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+.chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+.chat-msg.ai { align-self: flex-start; }
+.chat-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; background: #ede9fe; }
+.chat-msg.user .chat-avatar { background: #dbeafe; }
+.chat-bubble { padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.chat-msg.user .chat-bubble { background: var(--primary); color: #fff; border-bottom-right-radius: 4px; }
+.chat-msg.ai .chat-bubble { background: #fff; border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.chat-input-row { display: flex; gap: 8px; margin-top: 10px; }
+.chat-input-row input { flex: 1; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px; font-family: inherit; outline: none; }
+.chat-input-row input:focus { border-color: var(--primary); }
+.chat-input-row button { padding: 8px 18px; border-radius: 20px; border: none; background: var(--primary); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.chat-input-row button:disabled { background: #94a3b8; cursor: not-allowed; }
+.chat-quick-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.chat-quick-btn { padding: 4px 12px; border-radius: 14px; border: 1px solid var(--border); background: #fff; font-size: 11px; cursor: pointer; font-family: inherit; color: var(--text); }
+.chat-quick-btn:hover { border-color: var(--primary); background: var(--primary-light); }
+.chat-placeholder { text-align: center; color: var(--text-secondary); padding: 30px; }
+.typing-indicator { display: flex; gap: 3px; padding: 6px 10px; }
+.typing-indicator span { width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; animation: bounce 1.4s infinite; }
+.typing-indicator span:nth-child(2) { animation-delay: .2s; }
+.typing-indicator span:nth-child(3) { animation-delay: .4s; }
+@keyframes bounce { 0%,80%,100%{transform:scale(.6);opacity:.4;} 40%{transform:scale(1);opacity:1;} }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">📈</div>
+      <div>
+        <h1>APAC商品部新品订货预测工具 <span style="background:#10b981;color:#fff;padding:2px 10px;border-radius:12px;font-size:13px;vertical-align:middle;">v2.0</span></h1>
+        <span>APAC New Product Order Forecast</span>
+      </div>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" data-mode="dp" onclick="switchMode('dp')">📊 DP预测</button>
+      <button class="mode-btn" data-mode="chat" onclick="switchMode('chat')">💬 AI分析</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ===== SECTION 1: DATA IMPORT ===== -->
+  <div class="card" id="importCard">
+    <div class="card-title">
+      <span class="icon icon-blue">📥</span> 数据导入
+    </div>
+    <div class="import-zone" id="importZone" onclick="document.getElementById('fileInput').click()">
+      <div class="import-icon">📂</div>
+      <h3>拖拽 Excel 文件到此处，或点击选择</h3>
+      <p>支持 .xlsx / .xls 格式，自动识别数据列</p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
+    </div>
+    <div class="file-info hidden" id="fileInfo"></div>
+    <div class="file-info hidden" id="fileWarning" style="background:#fff7ed;border:1px solid #fcd34d;color:#92400e;margin-top:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span>⚠️ 注意：重新导入将覆盖当前数据，下游分析结果将一并清除</span>
+    </div>
+  </div>
+
+  <!-- ===== FILTER ===== -->
+  <div class="card hidden" id="filterCard">
+    <div class="card-title"><span class="icon icon-orange">🔍</span> 筛选条件</div>
+    <div class="form-row">
+      <div class="form-group"><label>IP</label><input class="filter-input" id="fIP" list="dlIP" placeholder="全部" onchange="onFilterChange()"></div>
+      <div class="form-group"><label>商业一级</label><input class="filter-input" id="fCat1" list="dlCat1" placeholder="全部" onchange="onFilterChange()"></div>
+      <div class="form-group"><label>商业二级</label><input class="filter-input" id="fCat2" list="dlCat2" placeholder="全部" onchange="onFilterChange()"></div>
+      <div class="form-group"><label>区域</label><input class="filter-input" id="fRegion" list="dlRegion" placeholder="全部" onchange="onFilterChange()"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>分类</label><input class="filter-input" id="fProductLine" list="dlProductLine" placeholder="全部" onchange="onFilterChange()"></div>
+      <div class="form-group"><label>上市时间</label><input class="filter-input" id="fLaunch" list="dlLaunch" placeholder="全部" onchange="onFilterChange()"></div>
+      <div class="form-group" style="justify-content:flex-end;">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="doPredict()">📊 开始预测</button>
+        <button class="btn btn-outline btn-sm" onclick="resetAllFilters()" style="margin-left:4px;">🔄 重置</button>
+      </div>
+    </div>
+    <datalist id="dlIP"></datalist><datalist id="dlCat1"></datalist><datalist id="dlCat2"></datalist><datalist id="dlRegion"></datalist><datalist id="dlProductLine"></datalist><datalist id="dlLaunch"></datalist>
+    <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;" id="filterStatus"></div>
+  </div>
+
+  <!-- ===== DATA PREVIEW ===== -->
+  <div class="card hidden" id="previewCard">
+    <div class="card-title"><span class="icon icon-green">📋</span> 数据预览 <span style="font-size:11px;font-weight:400;color:var(--text-secondary);" id="rowCount"></span></div>
+    <div class="table-wrapper" style="max-height:350px;"><table id="dataTable"><thead></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- ===== RESULTS ===== -->
+  <div class="card hidden" id="resultCard">
+    <div class="card-title"><span class="icon icon-red">📊</span> 需求预测结果 <span style="font-size:12px;font-weight:400;color:var(--text-secondary);" id="resultLabel"></span></div>
+    <div style="overflow-x:auto;">
+      <table id="resultTable" style="width:100%;border-collapse:collapse;font-size:13px;"><thead></thead><tbody></tbody></table>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-secondary);" id="resultMethod"></div>
+    <button class="btn btn-outline btn-sm" onclick="exportResult()" style="margin-top:8px;">📥 导出Excel</button>
+  </div>
+
+
+  <!-- ===== AI CHAT ===== -->
+  <div class="card hidden" id="chatCard">
+    <div class="card-title"><span class="icon icon-purple">💬</span> AI 市场分析助手</div>
+    <div style="margin-bottom:12px;">
+      <div class="form-row">
+        <div class="form-group"><label>API地址</label><input type="text" id="chatApiUrl" placeholder="https://api.openai.com/v1/chat/completions"></div>
+        <div class="form-group"><label>API Key</label><input type="password" id="chatApiKey" placeholder="sk-..."></div>
+        <div class="form-group" style="flex:0 0 120px;"><label>模型</label><input type="text" id="chatModel" value="gpt-4o"></div>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-placeholder" id="chatPlaceholder">
+        <div style="font-size:48px;margin-bottom:8px;">🤖</div>
+        <p>我是你的APAC市场分析助手</p>
+        <p style="font-size:12px;color:#94a3b8;">导入数据后，我可以帮你分析市场趋势、区域特点、IP策略等</p>
+      </div>
+    </div>
+    <div class="chat-quick-actions" id="chatQuickBtns" style="display:none;">
+      <button class="chat-quick-btn" onclick="askQuick('market')">📈 分析市场趋势</button>
+      <button class="chat-quick-btn" onclick="askQuick('ip')">🎯 IP策略建议</button>
+      <button class="chat-quick-btn" onclick="askQuick('region')">🌏 区域市场分析</button>
+      <button class="chat-quick-btn" onclick="askQuick('summary')">📋 数据总结</button>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="输入问题，如：LABUBU在新西兰市场的表现如何？" onkeydown="if(event.key==='Enter')sendChat()">
+      <button id="chatSendBtn" onclick="sendChat()">发送 ➤</button>
+    </div>
+  </div>
+
+<footer class="footer">
+  <p>APAC DP需求预测 & AI分析工具 v3.0 · 数据仅在本地处理（AI模式除外） · 请确保数据安全</p>
+</footer>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div id="toastContainer"></div>
+
+
+<script>
+// ===== STATE =====
+var state = { mode: 'dp', rawData: null, headers: [], importFileName: null, importTime: null, tableFormat: 'simple' };
+var _accRecords = [], _accFiles = [];
+
+// ===== HELPERS =====
+function loadSettings() {
+  try { var s = localStorage.getItem('dp_tool_settings'); return s ? JSON.parse(s) : {}; } catch(e) { return {}; }
+}
+function saveSettings(obj) {
+  try { var cur = loadSettings(); Object.assign(cur, obj); localStorage.setItem('dp_tool_settings', JSON.stringify(cur)); } catch(e) {}
+}
+function showToast(msg, type) {
+  var t = document.createElement('div'); t.className = 'toast ' + (type||'info'); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 3000);
+}
+function $(id) { return document.getElementById(id); }
+function show(id) { var e = $(id); if(e) e.classList.remove('hidden'); }
+function hide(id) { var e = $(id); if(e) e.classList.add('hidden'); }
+
+// ===== EXCEL IMPORT =====
+function handleFileSelect(event) {
+  var files = event.target.files;
+  if (!files || files.length === 0) return;
+  _accRecords = state.rawData ? state.rawData.slice() : [];
+  _accFiles = state._fileNames ? state._fileNames.slice() : [];
+  for (var i = 0; i < files.length; i++) processFile(files[i]);
+}
+
+function processFile(file) {
+  if (!file.name.match(/\.(xlsx|xls)$/i)) { showToast('请选择Excel文件', 'error'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      for (var si = 0; si < wb.SheetNames.length; si++) {
+        var raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[si]], { header: 1, defval: '' });
+        if (!raw || raw.length < 3) continue;
+
+        console.log('[DP] Sheet: ' + wb.SheetNames[si] + ' rows=' + raw.length);
+        console.log('[DP]   Row0:', JSON.stringify((raw[0]||[]).slice(0,15)));
+        console.log('[DP]   Row1:', JSON.stringify((raw[1]||[]).slice(0,15)));
+
+        var fmt = detectFormat(raw);
+        console.log('[DP]   Format: ' + fmt);
+
+        if (fmt === 'cross') {
+          var crossRecords = parseCrossTable(raw);
+          console.log('[DP]   Cross: ' + crossRecords.length + ' records');
+          _accRecords = _accRecords.concat(crossRecords);
+        } else {
+          var simpleRecords = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[si]], { defval: '' });
+          console.log('[DP]   Simple: ' + simpleRecords.length + ' records');
+          _accRecords = _accRecords.concat(simpleRecords);
+        }
+      }
+      _accFiles.push(file.name);
+      state.rawData = _accRecords;
+      state.headers = _accRecords.length > 0 ? Object.keys(_accRecords[0]) : [];
+      state.importFileName = _accFiles.join(' + ');
+      state.importTime = new Date().toLocaleString('zh-CN');
+      state._fileNames = _accFiles.slice();
+      state.tableFormat = (state.headers.indexOf('月份') >= 0) ? 'cross' : 'simple';
+
+      show('previewCard'); show('filterCard');
+      renderPreview(); populateFilters();
+      updateFileInfo();
+      showToast('导入成功: ' + state.rawData.length + ' 条 (' + _accFiles.length + '个文件)', 'success');
+    } catch(err) {
+      showToast('解析失败: ' + err.message, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function updateFileInfo() {
+  var info = $('fileInfo'); if (!info) return;
+  info.classList.remove('hidden');
+  info.innerHTML = '<span>✅ <strong>' + (_accFiles.join(', ') || '未知') + '</strong> — ' + state.rawData.length + ' 行</span>' +
+    '<span><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();$(\'fileInput\').click();">📎 添加文件</button> ' +
+    '<button class="btn btn-sm" onclick="event.stopPropagation();clearAll();" style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;">🗑️ 删除</button></span>';
+  $('importZone').style.display = 'none';
+}
+
+function clearAll() {
+  state.rawData = null; state.headers = []; _accRecords = []; _accFiles = [];
+  hide('previewCard'); hide('filterCard'); hide('resultCard');
+  var info = $('fileInfo'); if (info) info.classList.add('hidden');
+  $('importZone').style.display = '';
+  $('fileInput').value = '';
+}
+
+// ===== FORMAT DETECTION =====
+function detectFormat(raw) {
+  if (!raw || raw.length < 3) return 'simple';
+  var r1 = raw[1] || [];
+  var mc = 0;
+  for (var i = 0; i < r1.length; i++) { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(String(r1[i]||'').trim())) mc++; }
+  var r0 = raw[0] || [];
+  var kw = ['区域','国际','日本','韩国','泰国','新加坡','越南','马来西亚','印尼','澳大利亚','新西兰','POP'];
+  var rc = 0;
+  for (var i = 0; i < r0.length; i++) { var s = String(r0[i]||''); for (var k = 0; k < kw.length; k++) { if (s.indexOf(kw[k])>=0) { rc++; break; } } }
+  return (mc >= 3 && rc >= 1) ? 'cross' : 'simple';
+}
+
+// ===== CROSS-TABLE PARSER =====
+function parseCrossTable(raw) {
+  var r0 = raw[0] || [], r1 = raw[1] || [];
+  var regions = [], lastR = '';
+  for (var i = 0; i < r0.length; i++) { var v = String(r0[i]||'').trim(); if (v) lastR = v; regions.push(lastR); }
+  var colMap = [];
+  for (var i = 0; i < r1.length; i++) {
+    var m = String(r1[i]||'').trim();
+    if (m === '汇总' || m === '合计' || m === '总计' || m === '') colMap.push(null);
+    else colMap.push({ region: regions[i]||'', month: m });
+  }
+  var records = [], lastIP = '', lastCat = '';
+  for (var ri = 2; ri < raw.length; ri++) {
+    var dr = raw[ri]; if (!dr || dr.length === 0) continue;
+    var ip = String(dr[0]||'').trim(), cat = String(dr[1]||'').trim();
+    if (ip) lastIP = ip; if (cat) lastCat = cat;
+    if (!lastIP || lastIP === '合计' || lastIP === '汇总') continue;
+    for (var ci = 2; ci < dr.length; ci++) {
+      if (ci >= colMap.length) break;
+      var cm = colMap[ci]; if (!cm || !cm.region) continue;
+      var rv = dr[ci]; if (rv === '' || rv === null || rv === undefined) continue;
+      var v = parseFloat(rv); if (isNaN(v) || !isFinite(v) || v <= 0) continue;
+      records.push({ 'IP': lastIP, '商业一级': lastCat||'', '商业二级': '', '区域': cm.region, '月份': cm.month, '销售额': v });
+    }
+  }
+  var cnts = {};
+  for (var i = 0; i < records.length; i++) { var reg = records[i]['区域']; cnts[reg] = (cnts[reg]||0)+1; }
+  return records.filter(function(r){ return cnts[r['区域']] >= 1; });
+}
+
+// ===== RENDER PREVIEW =====
+function renderPreview() {
+  var data = state.rawData || [];
+  $('rowCount').textContent = '(共 ' + data.length + ' 条)';
+  var thead = document.querySelector('#dataTable thead');
+  var tbody = document.querySelector('#dataTable tbody');
+  if (!thead || !tbody) return;
+  thead.innerHTML = '<tr><th>#</th>' + state.headers.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '</tr>';
+  tbody.innerHTML = '';
+  var preview = data.slice(0, 100);
+  preview.forEach(function(row, ri) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + (ri+1) + '</td>' + state.headers.map(function(h){ return '<td>' + (row[h] !== undefined ? row[h] : '') + '</td>'; }).join('');
+    tbody.appendChild(tr);
+  });
+}
+
+// ===== FILTERS =====
+var FIXED_IP = ['1001','AZURA','BAZBON','BIRD MAN','BLYTHE','BUNNY','CHAKA','CHERRYPIE','COOLABO','CRYBABY','DIMOO','DISNEY','DUCKOO','EVA','FLABJACKS','GUMMY','HACIPUPU','HANDS IN FACTORY','HIRONO','HYDE','INOSOUL','INSTINCTOY','JUST A GIRL','KONATSUYA','KUBO','LABUBU','LILIOS','LOOPY','Merodi','MINICO','MIX IP','MOFY','MOKOKO','MOLLY','Nyota','OIPIPPI','PINO JELLY','Polar','POP MART','PUCKY','SKULLPANDA','SNOOPY','SUPERTUTU','TAPOO','TinyTiny','Trevor Andrew','UNDERVERSE','VIVICAT','YUKI','ZIMOMO','ZOE','ZSIGA','阿巳与小铃铛','爱心熊','奥特曼','芭比','北海怪兽','变形金刚','穿越火线','蛋仔派对','福饱饱','怪奇物语','光年正传','光与夜之恋','鬼灭之刃','海绵宝宝','航海王','华纳','环球','环太平洋','火影忍者','间谍过家家','九尾狐','可口可乐','蜡笔小新','炉石传说','名侦探柯南','魔卡少女樱','哪吒','排球少年','叛桃','赛博朋克','三丽鸥','山海经','上野阳介','圣斗士星矢','时光代理人','柿子椒熊','守望先锋','数码宝贝','双人成行','泰迪熊','天线宝宝','铁臂阿童木','王嘉尔','王者荣耀','伍六七','仙剑奇侠传','小刘鸭','小马宝莉','小甜豆','星星人','银魂','英雄联盟','樱桃小丸子','原神','跃动青春','葬送的芙莉莲','咒术回战'];
+var FIXED_CAT1 = ['潮流玩具','潮流周边','毛绒玩具','收藏玩具','珠宝首饰','组合产品'];
+var FIXED_CAT2 = ['POP BEAN','场景玩具','大号','吊卡','积木','可动人偶','硬线公仔盲盒','外采','载具模型','手办模型','桌游卡牌','3C及周边','包品','陈列展示','服鞋配饰','挂件挂饰','家居生活','礼品包装','萌粒周边','宠物周边','香氛类','文创','软脸毛绒玩偶','硬脸毛绒玩偶','MEGA','MEGA 周边','外部收藏','首饰','定制礼盒','福袋'];
+var FIXED_REGION = ['亚太','泰国','印尼','澳洲','新西兰','日本','韩国','马来西亚','新加披','菲律宾+文莱','卡塔尔','阿联酋','越南-VN'];
+var FIXED_PRODLINE = ['3C及周边','MEGA 100%','MEGA 1000%','MEGA 400%','包品','陈列展示','大号','吊卡','服鞋配饰','挂件挂饰','家居生活','可动人偶','萌粒周边','软脸毛绒玩偶','文创','香氛类','硬脸毛绒玩偶','硬线公仔盲盒'];
+var FIXED_MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+function populateFilters() {
+  var fields = [
+    { id: 'fIP', dl: 'dlIP', key: 'IP', fixed: FIXED_IP },
+    { id: 'fCat1', dl: 'dlCat1', key: '商业一级', fixed: FIXED_CAT1 },
+    { id: 'fCat2', dl: 'dlCat2', key: '商业二级', fixed: FIXED_CAT2 },
+    { id: 'fRegion', dl: 'dlRegion', key: '渠道', fixed: FIXED_REGION },
+    { id: 'fProductLine', dl: 'dlProductLine', key: '分类', fixed: FIXED_PRODLINE },
+    { id: 'fLaunch', dl: 'dlLaunch', key: '上市时间', fixed: FIXED_MONTHS }
+  ];
+  fields.forEach(function(f) {
+    var list = $(f.dl); if (!list) return;
+    list.innerHTML = '';
+    // Merge fixed values + actual data values
+    var vals = new Set(f.fixed || []);
+    if (state.rawData) {
+      state.rawData.forEach(function(r) {
+        var v = r[f.key]; if (v !== undefined && v !== null && v !== '') vals.add(String(v));
+      });
+    }
+    var sorted = Array.from(vals).sort();
+    // Show first 5 data values in console
+    var dataVals = []; state.rawData.slice(0,50).forEach(function(r){
+      var v=r[f.key]; if(v&&!dataVals.includes(String(v)))dataVals.push(String(v));
+    });
+    console.log('[DP] ' + f.key + ': ' + sorted.length + ' 选项, 数据示例:', dataVals.slice(0,8).join(', '));
+    sorted.forEach(function(v) { var o = document.createElement('option'); o.value = v; list.appendChild(o); });
+  });
+  onFilterChange();
+}
+
+function onFilterChange() {
+  var data = state.rawData || [];
+  if (data.length === 0) return;
+  var fIP = $('fIP').value.trim(), fCat1 = $('fCat1').value.trim(), fCat2 = $('fCat2').value.trim();
+  var fRegion = $('fRegion').value.trim(), fLine = $('fProductLine').value.trim();
+  var matched = data.filter(function(r) {
+    if (fIP && String(r['IP']||'') !== fIP) return false;
+    if (fRegion && String(r['渠道']||'') !== fRegion) return false;
+    if (fLine && String(r['分类']||'') !== fLine) return false;
+    return true;
+  });
+  $('filterStatus').textContent = '匹配: ' + matched.length + ' / ' + data.length + ' 条';
+}
+
+// ===== PREDICTION =====
+// Benchmark columns in data: 30天标尺, 30-60天标尺, ..., 150-180天标尺
+// Detect actual benchmark column names from data (SheetJS may trim spaces)
+function getBMCols() {
+  if (!state.rawData || state.rawData.length === 0) return [];
+  var keys = Object.keys(state.rawData[0]);
+  console.log('[DP] Data keys:', JSON.stringify(keys));
+  // Find columns containing '标尺'
+  var bm = [];
+  for (var i = 0; i < keys.length; i++) {
+    if (keys[i].indexOf('标尺') >= 0) bm.push(keys[i]);
+  }
+  // Sort by the day number extracted from the column name
+  bm.sort(function(a,b) {
+    var na = parseInt(a.match(/(\d+)/)[0]) || 0;
+    var nb = parseInt(b.match(/(\d+)/)[0]) || 0;
+    return na - nb;
+  });
+  console.log('[DP] Benchmark cols:', JSON.stringify(bm));
+  return bm;
+}
+
+function doPredict() {
+  if (!state.rawData || state.rawData.length === 0) { showToast('请先导入数据', 'error'); return; }
+  var launch = $('fLaunch').value.trim();
+  if (!launch) { showToast('请选择上市时间', 'error'); return; }
+  var launchNum = parseInt(launch.replace('月', ''));
+  if (isNaN(launchNum)) { showToast('上市时间格式错误', 'error'); return; }
+
+  var fIP = $('fIP').value.trim(), fRegion = $('fRegion').value.trim(), fLine = $('fProductLine').value.trim();
+  var parts = []; if(fIP)parts.push(fIP); if(fRegion)parts.push(fRegion); if(fLine)parts.push(fLine);
+  var fl = parts.join(' × ') || '全部';
+
+  // Filter matching rows from data
+  var ref = state.rawData.filter(function(r) {
+    if (fIP && String(r['IP']||'') !== fIP) return false;
+    if (fRegion && String(r['渠道']||'') !== fRegion) return false;
+    if (fLine && String(r['分类']||'') !== fLine) return false;
+    return true;
+  });
+
+  console.log('[DP] Predict: ref=' + ref.length + ' rows, launch=' + launch);
+
+  if (ref.length === 0) { showToast('筛选条件下无匹配数据', 'error'); return; }
+
+  // Get actual benchmark column names from data
+  var BM_COLS = getBMCols();
+  // Build 12-month array, fill benchmark values at launch-relative positions
+  var all12 = [];
+  for (var m = 1; m <= 12; m++) {
+    var monthIdx = m - launchNum;
+    var val = 0, isActive = false;
+    if (monthIdx >= 0 && monthIdx < 6 && monthIdx < BM_COLS.length) {
+      var total = 0;
+      ref.forEach(function(r) {
+        var v = parseFloat(r[BM_COLS[monthIdx]]);
+        if (!isNaN(v) && isFinite(v)) total += v;
+      });
+      val = Math.round(total);
+      isActive = true;
+    }
+    all12.push({ month: m + '月', value: val, isActive: isActive });
+  }
+
+  var avgPerRow = ref.length > 0 ? all12.map(function(p) { return p.isActive ? Math.round(p.value / ref.length) : 0; }) : [];
+  var activeCount = all12.filter(function(p){return p.isActive;}).length;
+
+  console.log('[DP] 12-month:', JSON.stringify(all12));
+
+  show('resultCard');
+  $('resultLabel').textContent = '· ' + fl + ' · 上市: ' + launch + ' · 匹配: ' + ref.length + '条';
+  $('resultMethod').textContent = '标尺法(30~180天) | 活跃月: ' + activeCount + ' | 基于' + ref.length + '条';
+
+  var thead = document.querySelector('#resultTable thead');
+  var tbody = document.querySelector('#resultTable tbody');
+  thead.innerHTML = ''; tbody.innerHTML = '';
+
+  // Row 0: Filter condition across all 12 months
+  var tr0 = document.createElement('tr');
+  tr0.style.cssText = 'background:#1e3a5f;color:white;font-weight:700;';
+  tr0.innerHTML = '<td>筛选条件</td>' + all12.map(function(){return '<td style="text-align:center;">'+fl+'</td>';}).join('');
+  thead.appendChild(tr0);
+
+  // Row 1: Month labels
+  var tr1 = document.createElement('tr');
+  tr1.style.cssText = 'background:#2563eb;color:white;font-weight:600;';
+  tr1.innerHTML = '<td>月份</td>' + all12.map(function(p){return '<td style="text-align:center;">'+p.month+'</td>';}).join('');
+  thead.appendChild(tr1);
+
+  // Row 2: Status (active vs inactive)
+  var tr2 = document.createElement('tr');
+  tr2.style.cssText = 'background:#eff6ff;font-size:11px;';
+  tr2.innerHTML = '<td>状态</td>' + all12.map(function(p){
+    return '<td style="text-align:center;' + (p.isActive ? 'color:#059669;' : 'color:#94a3b8;') + '">' + (p.isActive ? '● 预测期' : '○') + '</td>';
+  }).join('');
+  thead.appendChild(tr2);
+
+  // Compute total order quantity and MoM
+  var totalOrder = all12.map(function(p) { return p.value; }); // total (sum)
+  var momChange = [];
+  for (var i = 0; i < 12; i++) {
+    if (i === 0 || !all12[i].isActive || !all12[i-1].isActive) { momChange.push(null); }
+    else {
+      var prev = totalOrder[i-1], curr = totalOrder[i];
+      momChange.push(prev > 0 ? ((curr - prev) / prev * 100) : null);
+    }
+  }
+
+  // Row: 条均订货量 (always visible)
+  var trMain = document.createElement('tr');
+  trMain.id = 'dpRowAvg';
+  trMain.style.cssText = 'background:#f0fdf4;cursor:pointer;';
+  trMain.title = '点击展开/收起详情';
+  trMain.innerHTML = '<td style="font-weight:700;"><span id="dpExpandBtn" style="display:inline-block;width:18px;text-align:center;margin-right:4px;color:#2563eb;">+</span>条均订货量</td>' + avgPerRow.map(function(v, i){
+    var s = all12[i].isActive ? 'color:#2563eb;font-weight:700;' : 'color:#cbd5e1;';
+    return '<td style="text-align:center;font-size:16px;' + s + '">' + (all12[i].isActive ? v.toLocaleString('zh-CN') : '-') + '</td>';
+  }).join('');
+  trMain.onclick = function() { toggleDetailRows(); };
+  tbody.appendChild(trMain);
+
+  // Row: 总计订货量 (hidden by default)
+  var trTotal = document.createElement('tr');
+  trTotal.className = 'dpDetailRow';
+  trTotal.style.cssText = 'display:none;background:#fefce8;';
+  trTotal.innerHTML = '<td style="font-weight:600;padding-left:24px;">└ 总计订货量</td>' + totalOrder.map(function(v, i){
+    var s = all12[i].isActive ? 'color:#2563eb;' : 'color:#cbd5e1;';
+    return '<td style="text-align:center;font-size:14px;' + s + '">' + (all12[i].isActive ? v.toLocaleString('zh-CN') : '-') + '</td>';
+  }).join('');
+  tbody.appendChild(trTotal);
+
+  // Row: 环比变化 (hidden by default)
+  var trMom = document.createElement('tr');
+  trMom.className = 'dpDetailRow';
+  trMom.style.cssText = 'display:none;background:#fefce8;';
+  trMom.innerHTML = '<td style="font-weight:600;padding-left:24px;">└ 环比变化</td>' + momChange.map(function(ch, i){
+    if (ch === null) return '<td style="text-align:center;color:#94a3b8;">-</td>';
+    var c = ch >= 0 ? '#059669' : '#dc2626', s = ch >= 0 ? '+' : '';
+    return '<td style="text-align:center;font-weight:600;color:' + c + ';">' + s + ch.toFixed(1) + '%</td>';
+  }).join('');
+  tbody.appendChild(trMom);
+
+  // Store for export
+  state._exportData = { filterLabel: fl, launch: launch, launchNum: launchNum, all12: all12, avgPerRow: avgPerRow, rowCount: ref.length };
+  state._detailOpen = false;
+  $('resultCard').scrollIntoView({behavior:'smooth'});
+}
+
+function toggleDetailRows() {
+  state._detailOpen = !state._detailOpen;
+  var rows = document.querySelectorAll('.dpDetailRow');
+  var btn = document.getElementById('dpExpandBtn');
+  rows.forEach(function(r) { r.style.display = state._detailOpen ? '' : 'none'; });
+  if (btn) btn.textContent = state._detailOpen ? '−' : '+';
+}
+
+function exportResult() {
+  if (!state._exportData) { showToast("请先生成预测", "error"); return; }
+  var d = state._exportData;
+  var wb = XLSX.utils.book_new();
+
+  // Simple format: col A = filter label, col B-M = 1月~12月 values
+  var row = { "筛选条件": d.filterLabel };
+  d.all12.forEach(function(p, i) {
+    row[p.month] = p.isActive ? d.avgPerRow[i] : 0;
+  });
+
+  var ws = XLSX.utils.json_to_sheet([row]);
+  XLSX.utils.book_append_sheet(wb, ws, "DP条均预测");
+  XLSX.writeFile(wb, "DP条均预测_" + new Date().toISOString().substring(0,10) + ".xlsx");
+  showToast("导出成功", "success");
+}
+
+
+// ===== MODE SWITCH =====
+function switchMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll('.mode-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  // Show/hide cards
+  var dpCards = ['filterCard', 'previewCard', 'resultCard'];
+  dpCards.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', mode !== 'dp');
+  });
+  var chatCard = document.getElementById('chatCard');
+  if (chatCard) chatCard.classList.toggle('hidden', mode !== 'chat');
+  // Load saved API settings
+  if (mode === 'chat') loadChatSettings();
+}
+
+// ===== CHAT =====
+var chatState = { messages: [], loading: false };
+
+function loadChatSettings() {
+  var s = loadSettings();
+  if (s.apiUrl) document.getElementById('chatApiUrl').value = s.apiUrl;
+  if (s.apiKey) document.getElementById('chatApiKey').value = s.apiKey;
+  if (s.aiModel) document.getElementById('chatModel').value = s.aiModel;
+}
+
+function saveChatSettings() {
+  saveSettings({
+    apiUrl: document.getElementById('chatApiUrl').value.trim(),
+    apiKey: document.getElementById('chatApiKey').value.trim(),
+    aiModel: document.getElementById('chatModel').value.trim()
+  });
+}
+
+function getDataContext() {
+  if (!state.rawData || state.rawData.length === 0) return '';
+  var ctx = '## 当前已导入数据概况\n';
+  ctx += '文件: ' + (state.importFileName || '未知') + '\n';
+  ctx += '总行数: ' + state.rawData.length + '\n';
+  ctx += '列名: ' + state.headers.join(', ') + '\n';
+  // IP summary
+  var ips = new Set();
+  state.rawData.forEach(function(r) { if (r.IP) ips.add(r.IP); });
+  ctx += 'IP数: ' + ips.size + ' (' + Array.from(ips).slice(0,15).join(', ') + '...)\n';
+  // Region summary
+  var regions = new Set();
+  state.rawData.forEach(function(r) { if (r['渠道']) regions.add(r['渠道']); });
+  ctx += '区域: ' + Array.from(regions).join(', ') + '\n';
+  // Category summary
+  var cats = new Set();
+  state.rawData.forEach(function(r) { if (r['分类']) cats.add(r['分类']); });
+  ctx += '分类: ' + Array.from(cats).join(', ') + '\n';
+  // Benchmark summary
+  var bmCols = getBMCols();
+  if (bmCols.length > 0) {
+    ctx += '标尺维度: ' + bmCols.join(', ') + '\n';
+  }
+  return ctx;
+}
+
+async function sendChat() {
+  var input = document.getElementById('chatInput');
+  var msg = input.value.trim();
+  if (!msg || chatState.loading) return;
+
+  var apiUrl = document.getElementById('chatApiUrl').value.trim();
+  var apiKey = document.getElementById('chatApiKey').value.trim();
+  var model = document.getElementById('chatModel').value.trim() || 'gpt-4o';
+
+  if (!apiUrl || !apiKey) { showToast('请先配置API地址和Key', 'error'); return; }
+  saveChatSettings();
+
+  chatState.messages.push({ role: 'user', content: msg });
+  input.value = '';
+  chatState.loading = true;
+  document.getElementById('chatSendBtn').disabled = true;
+
+  renderChatMessages();
+  document.getElementById('chatPlaceholder').style.display = 'none';
+  document.getElementById('chatQuickBtns').style.display = 'flex';
+
+  // Show typing
+  var container = document.getElementById('chatMessages');
+  var typing = document.createElement('div');
+  typing.className = 'chat-msg ai';
+  typing.id = 'typingIndicator';
+  typing.innerHTML = '<div class="chat-avatar">🤖</div><div class="chat-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+  container.appendChild(typing);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    var dataCtx = getDataContext();
+    var systemPrompt = '你是APAC潮玩商品部的AI市场分析助手。你负责分析亚太市场（澳大利亚、新西兰、日本、韩国、泰国、新加坡、马来西亚、印尼、越南、菲律宾等）的玩具/盲盒/IP衍生品市场。\n\n你的能力：\n1. 分析各IP在不同区域的市场表现\n2. 提供市场趋势和消费者偏好洞察\n3. 结合文化、节日、体育赛事等因素分析市场机会\n4. 基于导入的销售数据给出订货建议\n\n回答风格：专业、简洁、有数据支撑。\n\n' + dataCtx;
+
+    var messages = [
+      { role: 'system', content: systemPrompt },
+    ];
+    // Add last 10 messages for context
+    var recent = chatState.messages.slice(-10);
+    messages = messages.concat(recent);
+
+    var resp = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ model: model, messages: messages, temperature: 0.7, max_tokens: 2000 })
+    });
+
+    var typingEl = document.getElementById('typingIndicator');
+    if (typingEl) typingEl.remove();
+
+    if (!resp.ok) {
+      var err = await resp.text();
+      throw new Error('API错误 ' + resp.status + ': ' + err.substring(0, 200));
+    }
+
+    var data = await resp.json();
+    var reply = data.choices?.[0]?.message?.content || '(未收到回复)';
+    chatState.messages.push({ role: 'ai', content: reply });
+    renderChatMessages();
+
+  } catch (err) {
+    var typingEl = document.getElementById('typingIndicator');
+    if (typingEl) typingEl.remove();
+    chatState.messages.push({ role: 'ai', content: '❌ 请求失败: ' + err.message + '\n\n请检查API配置。' });
+    renderChatMessages();
+    console.error(err);
+  } finally {
+    chatState.loading = false;
+    document.getElementById('chatSendBtn').disabled = false;
+    document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+  }
+}
+
+function renderChatMessages() {
+  var container = document.getElementById('chatMessages');
+  var typingEl = document.getElementById('typingIndicator');
+  container.innerHTML = '';
+  if (typingEl) container.appendChild(typingEl);
+
+  chatState.messages.forEach(function(m) {
+    var div = document.createElement('div');
+    div.className = 'chat-msg ' + m.role;
+    var avatar = m.role === 'user' ? '👤' : '🤖';
+    var content = m.content
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>')
+      .replace(/^- (.+)$/gm, '• $1');
+    div.innerHTML = '<div class="chat-avatar">' + avatar + '</div><div class="chat-bubble">' + content + '</div>';
+    container.appendChild(div);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
+function askQuick(type) {
+  var qs = {
+    market: '请基于导入数据，分析各区域的市场趋势和表现差异，给出关键洞察。',
+    ip: '请分析当前数据中各IP的表现排名，给出IP策略建议（哪些IP值得加大投入，哪些需要谨慎）。',
+    region: '请逐个分析各区域市场的特点、消费者偏好、文化因素和注意事项。重点关注新西兰和澳大利亚市场。',
+    summary: '请对导入的数据做全面总结：关键数据指标、TOP IP、各区域贡献度、标尺数据特征。'
+  };
+  var q = qs[type] || '';
+  if (q) {
+    document.getElementById('chatInput').value = q;
+    sendChat();
+  }
+}
+
+
+// ===== INIT =====
+document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+var iz = document.getElementById('importZone');
+if (iz) {
+  iz.addEventListener('dragover', function(e){ e.preventDefault(); iz.classList.add('drag-over'); });
+  iz.addEventListener('dragleave', function(){ iz.classList.remove('drag-over'); });
+  iz.addEventListener('drop', function(e){ e.preventDefault(); iz.classList.remove('drag-over'); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
+}
+</script>
+
+
+</body>
+</html>

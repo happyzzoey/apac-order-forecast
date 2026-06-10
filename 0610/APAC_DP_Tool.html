@@ -1,0 +1,2442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>APAC商品部新品订货预测工具 v2.0</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --primary-light: #dbeafe;
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --border: #e2e8f0;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  --radius: 12px;
+  --transition: 0.2s ease;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ===== HEADER ===== */
+.header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #3b82f6 100%);
+  color: white;
+  padding: 24px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+}
+
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 42px;
+  height: 42px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.logo h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.logo span {
+  font-size: 13px;
+  opacity: 0.8;
+  font-weight: 400;
+}
+
+/* Mode Toggle */
+.mode-toggle {
+  display: flex;
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.mode-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  background: transparent;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.mode-btn.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.mode-btn:hover:not(.active) {
+  color: white;
+}
+
+/* ===== CONTAINER ===== */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+.card:hover { box-shadow: var(--shadow-lg); }
+
+.card-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+
+.card-title .icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.icon-blue { background: #dbeafe; color: #2563eb; }
+.icon-green { background: #d1fae5; color: #059669; }
+.icon-purple { background: #ede9fe; color: #7c3aed; }
+.icon-orange { background: #fff7ed; color: #ea580c; }
+.icon-red { background: #fee2e2; color: #dc2626; }
+
+/* ===== IMPORT ZONE ===== */
+.import-zone {
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--radius);
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  background: #f8fafc;
+}
+
+.import-zone:hover, .import-zone.drag-over {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.import-zone .import-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.import-zone h3 {
+  font-size: 16px;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.import-zone p {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.import-zone input[type="file"] { display: none; }
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #166534;
+}
+
+/* ===== FORM ELEMENTS ===== */
+.form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 150px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group select,
+.form-group input {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #f8fafc;
+  transition: var(--transition);
+  color: var(--text);
+}
+
+.form-group select:focus,
+.form-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  background: white;
+}
+
+.btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.btn-primary:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
+
+.btn-success {
+  background: var(--success);
+  color: white;
+}
+
+.btn-success:hover { background: #059669; transform: translateY(-1px); }
+
+.btn-outline {
+  background: white;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+}
+
+.btn-outline:hover { background: var(--primary-light); }
+
+.btn-sm { padding: 6px 14px; font-size: 13px; }
+
+/* ===== TABLE ===== */
+.table-wrapper {
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table th, table td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+table th {
+  background: #f8fafc;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+table tbody tr:hover { background: #f8fafc; }
+
+table tbody tr:last-child td { border-bottom: none; }
+
+.col-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.col-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: white;
+  transition: var(--transition);
+}
+
+.col-chip:hover { border-color: var(--primary); }
+.col-chip.selected-date { background: #dbeafe; border-color: #2563eb; color: #2563eb; }
+.col-chip.selected-value { background: #d1fae5; border-color: #059669; color: #059669; }
+.col-chip.numeric { color: var(--text-secondary); }
+
+/* ===== METRICS ===== */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.metric-card {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.metric-card .metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.metric-card .metric-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* ===== CHART ===== */
+.chart-container {
+  position: relative;
+  height: 380px;
+  width: 100%;
+}
+
+/* ===== AI CONFIG ===== */
+.ai-config {
+  display: none;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-top: 8px;
+}
+
+.ai-config.show { display: block; }
+
+.ai-config .form-row { margin-bottom: 8px; }
+.ai-config .form-row:last-child { margin-bottom: 0; }
+
+.api-status {
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.api-status.success { background: #d1fae5; color: #065f46; }
+.api-status.error { background: #fee2e2; color: #991b1b; }
+.api-status.loading { background: #dbeafe; color: #1e40af; }
+
+/* ===== PREDICTION RESULTS ===== */
+.prediction-highlight {
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  border: 2px solid #93c5fd;
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-top: 16px;
+}
+
+.prediction-highlight h3 {
+  font-size: 15px;
+  margin-bottom: 12px;
+  color: var(--primary-dark);
+}
+
+.prediction-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.prediction-item {
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.prediction-item .period {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.prediction-item .value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.prediction-item .change {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.change-up { color: #059669; }
+.change-down { color: #dc2626; }
+
+/* ===== TABS CONTENT ===== */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  padding: 14px 20px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 999;
+  animation: slideIn 0.3s ease;
+  box-shadow: var(--shadow-lg);
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+.toast.info { background: #2563eb; }
+
+/* ===== FOOTER ===== */
+.footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .header-inner { flex-direction: column; text-align: center; }
+  .form-row { flex-direction: column; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .prediction-list { grid-template-columns: repeat(2, 1fr); }
+  .card { padding: 16px; }
+  .chart-container { height: 280px; }
+}
+
+/* ===== AI CHAT ===== */
+.chat-card {
+  margin-bottom: 20px;
+}
+
+.chat-messages {
+  height: 400px;
+  overflow-y: auto;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-msg {
+  display: flex;
+  gap: 10px;
+  max-width: 85%;
+  animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-msg.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.chat-msg.ai {
+  align-self: flex-start;
+}
+
+.chat-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.chat-msg.user .chat-avatar { background: #dbeafe; }
+.chat-msg.ai .chat-avatar { background: #ede9fe; }
+
+.chat-bubble {
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-msg.user .chat-bubble {
+  background: var(--primary);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-msg.ai .chat-bubble {
+  background: white;
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+
+.chat-bubble p { margin: 0 0 8px 0; }
+.chat-bubble p:last-child { margin: 0; }
+.chat-bubble ul, .chat-bubble ol { margin: 6px 0; padding-left: 20px; }
+.chat-bubble li { margin: 2px 0; }
+.chat-bubble strong { color: var(--primary-dark); }
+.chat-bubble code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.chat-input-row input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: var(--transition);
+}
+
+.chat-input-row input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+
+.chat-input-row button {
+  padding: 10px 20px;
+  border-radius: 24px;
+  border: none;
+  background: var(--primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.chat-input-row button:hover { background: var(--primary-dark); }
+.chat-input-row button:disabled { background: #94a3b8; cursor: not-allowed; }
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.chat-placeholder {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px;
+  font-size: 14px;
+}
+
+.chat-placeholder .icon { font-size: 48px; margin-bottom: 12px; }
+
+.chat-quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.chat-quick-btn {
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: white;
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  color: var(--text);
+}
+
+.chat-quick-btn:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+/* HIDDEN CLASS */
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<!-- v2.0 CACHE GUARD: if this comment is missing, you loaded an old cached version -->
+<script>
+(function() {
+  if (document.title.indexOf('v2.0') < 0) {
+    document.body.innerHTML = '<div style="max-width:600px;margin:100px auto;padding:30px;background:#fff3cd;border:3px solid #ffc107;border-radius:12px;font-family:sans-serif;text-align:center;"><h2>⚠️ 页面版本过旧</h2><p>你当前加载的是浏览器缓存的旧版本。</p><p style="margin:20px 0;"><button onclick="location.reload(true)" style="padding:12px 30px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;font-weight:700;">点击强制刷新到 v2.0</button></p><p style="color:#64748b;font-size:13px;">或按 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> 彻底清除缓存</p></div>';
+  }
+})();
+</script>
+
+<!-- ===== HEADER ===== -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">📈</div>
+      <div>
+        <h1>APAC商品部新品订货预测工具 <span style="background:#10b981;color:#fff;padding:2px 10px;border-radius:12px;font-size:13px;vertical-align:middle;">v2.0</span></h1>
+        <span>APAC New Product Order Forecast</span>
+      </div>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" data-mode="stats" onclick="switchMode('stats')">📊 统计预测</button>
+      <button class="mode-btn" data-mode="ai" onclick="switchMode('ai')">🤖 AI 智能预测</button>
+      <button class="mode-btn" data-mode="chat" onclick="switchMode('chat')">💬 AI 分析对话</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ===== SECTION 1: DATA IMPORT ===== -->
+  <div class="card" id="importCard">
+    <div class="card-title">
+      <span class="icon icon-blue">📥</span> 数据导入
+    </div>
+    <div class="import-zone" id="importZone" onclick="document.getElementById('fileInput').click()">
+      <div class="import-icon">📂</div>
+      <h3>拖拽 Excel 文件到此处，或点击选择</h3>
+      <p>支持 .xlsx / .xls 格式，自动识别数据列</p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
+    </div>
+    <div class="file-info hidden" id="fileInfo"></div>
+    <div class="file-info hidden" id="fileWarning" style="background:#fff7ed;border:1px solid #fcd34d;color:#92400e;margin-top:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span>⚠️ 注意：重新导入将覆盖当前数据，下游分析结果将一并清除</span>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 2: DATA PREVIEW & COLUMN SELECTION ===== -->
+  <div class="card hidden" id="previewCard">
+    <div class="card-title">
+      <span class="icon icon-green">📋</span> 数据预览
+      <span style="font-size:12px;font-weight:400;color:var(--text-secondary);" id="rowCount"></span>
+    </div>
+    <div style="margin-bottom:12px;">
+      <span style="font-size:13px;color:var(--text-secondary);">选择列：</span>
+      <span style="font-size:12px;color:#94a3b8;">（点击标记）</span>
+    </div>
+    <div class="col-selector" id="columnChips"></div>
+    <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
+        <span style="width:12px;height:12px;border-radius:3px;background:#dbeafe;border:1.5px solid #2563eb;display:inline-block;"></span>
+        📅 日期列: <strong id="dateColLabel">未选择</strong>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
+        <span style="width:12px;height:12px;border-radius:3px;background:#d1fae5;border:1.5px solid #059669;display:inline-block;"></span>
+        📊 数值列: <strong id="valueColLabel">未选择</strong>
+      </div>
+    </div>
+    <div class="table-wrapper" style="margin-top:12px;">
+      <table id="dataTable">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 3: CONFIGURATION ===== -->
+  <div class="card hidden" id="configCard">
+    <div class="card-title">
+      <span class="icon icon-purple">⚙️</span> 预测配置
+    </div>
+
+    <!-- Statistical Mode Config -->
+    <div class="tab-content active" id="statsConfig">
+      <div class="form-row">
+        <div class="form-group" style="flex:0 0 140px;">
+          <label>预测周期数</label>
+          <input type="number" id="forecastPeriods" value="6" min="1" max="60">
+        </div>
+        <div class="form-group">
+          <label>预测方法</label>
+          <select id="statsMethod">
+            <option value="lr">线性回归 (Linear Regression)</option>
+            <option value="ma">移动平均 (Moving Average)</option>
+            <option value="es">指数平滑 (Exponential Smoothing)</option>
+          </select>
+        </div>
+        <div class="form-group" id="maWindowGroup" style="display:none;flex:0 0 130px;">
+          <label>滑动窗口</label>
+          <input type="number" id="maWindow" value="3" min="2" max="20">
+        </div>
+        <div class="form-group" id="esAlphaGroup" style="display:none;flex:0 0 130px;">
+          <label>平滑系数 α</label>
+          <input type="number" id="esAlpha" value="0.3" min="0.05" max="0.95" step="0.05">
+        </div>
+        <div class="form-group" style="justify-content:flex-end;">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary" id="runStatsBtn" onclick="runStatisticalPrediction()">
+            ▶ 开始预测
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Mode Config -->
+    <div class="tab-content" id="aiConfig">
+      <div class="form-row">
+        <div class="form-group">
+          <label>API 地址 (OpenAI 兼容)</label>
+          <input type="text" id="aiApiUrl" placeholder="https://api.openai.com/v1/chat/completions" value="https://api.openai.com/v1/chat/completions">
+        </div>
+        <div class="form-group" style="flex:0 0 130px;">
+          <label>预测周期数</label>
+          <input type="number" id="aiForecastPeriods" value="6" min="1" max="60">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>API Key</label>
+          <input type="password" id="aiApiKey" placeholder="sk-...">
+        </div>
+        <div class="form-group" style="flex:0 0 140px;">
+          <label>模型</label>
+          <input type="text" id="aiModel" value="gpt-4o" placeholder="gpt-4o">
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn btn-primary" id="runAiBtn" onclick="runAIPrediction()">
+          🤖 开始 AI 预测
+        </button>
+        <span style="font-size:12px;color:var(--text-secondary);margin-left:12px;">AI 预测会发送历史数据到配置的 API</span>
+      </div>
+      <div id="apiStatus"></div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 4: RESULTS CHART ===== -->
+  <div class="card hidden" id="chartCard">
+    <div class="card-title">
+      <span class="icon icon-red">📉</span> 预测图表
+      <span style="font-size:12px;font-weight:400;color:var(--text-secondary);" id="chartMethodLabel"></span>
+    </div>
+    <div class="chart-container">
+      <canvas id="predictionChart"></canvas>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 5: ACCURACY METRICS ===== -->
+  <div class="card hidden" id="metricsCard">
+    <div class="card-title">
+      <span class="icon icon-orange">📏</span> 模型评估
+    </div>
+    <div class="metrics-grid" id="metricsGrid"></div>
+  </div>
+
+  <!-- ===== SECTION 6: RESULTS TABLE + EXPORT ===== -->
+  <div class="card hidden" id="resultsCard">
+    <div class="card-title">
+      <span class="icon icon-green">📋</span> 预测结果
+    </div>
+    <div class="prediction-highlight" id="predictionHighlight"></div>
+    <div class="table-wrapper" style="margin-top:16px;max-height:400px;">
+      <table id="resultsTable">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
+      <button class="btn btn-success" onclick="exportResults()">📥 导出 Excel</button>
+      <button class="btn btn-outline" onclick="exportChartImage()">🖼️ 导出图表图片</button>
+      <button class="btn btn-outline btn-sm" onclick="clearAll()">🔄 重新开始</button>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 7: AI CHAT ===== -->
+  <div class="card hidden" id="chatCard">
+    <div class="card-title">
+      <span class="icon icon-purple">💬</span> AI 分析对话
+      <span style="font-size:12px;font-weight:400;color:var(--text-secondary);">基于导入数据的智能分析</span>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-placeholder" id="chatPlaceholder">
+        <div class="icon">🤖</div>
+        <p>AI 助手可以帮你分析销售趋势和订货策略</p>
+        <p style="font-size:12px;margin-top:4px;">请先导入 Excel 数据，然后开始对话</p>
+      </div>
+    </div>
+    <div class="chat-quick-actions" id="chatQuickActions">
+      <button class="chat-quick-btn" onclick="askQuickQuestion('trend')">📈 分析历史销售趋势</button>
+      <button class="chat-quick-btn" onclick="askQuickQuestion('season')">🗓️ 分析季节性规律</button>
+      <button class="chat-quick-btn" onclick="askQuickQuestion('newproduct')">🆕 新品订货建议</button>
+      <button class="chat-quick-btn" onclick="askQuickQuestion('summary')">📋 数据总结概览</button>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="输入你的问题，例如：分析近期的销售趋势..." onkeydown="if(event.key==='Enter')sendMessage()">
+      <button id="chatSendBtn" onclick="sendMessage()">发送 ➤</button>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-secondary);">
+      ⚙️ 使用 AI 预测模式中配置的 API 地址和 Key ·
+      <a href="javascript:switchMode('ai')" style="color:var(--primary);">前往配置</a>
+    </div>
+  </div>
+
+</div>
+
+<footer class="footer">
+  <p>APAC商品部新品订货预测工具 v2.0 · 数据仅在本地处理（AI模式除外） · 请确保数据安全</p>
+</footer>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div id="toastContainer"></div>
+
+<script>
+// ============================================================
+// SAFE DOM ACCESS HELPER
+// ============================================================
+function $id(id) {
+  const el = document.getElementById(id);
+  if (!el) {
+    console.warn('[v2.0] Element not found: ' + id + ' — page may be outdated, please hard refresh (Ctrl+F5)');
+  }
+  return el;
+}
+
+function safeShow(id) {
+  const el = $id(id);
+  if (el) el.classList.remove('hidden');
+}
+
+function safeHide(id) {
+  const el = $id(id);
+  if (el) el.classList.add('hidden');
+}
+
+function safeToggle(id, condition) {
+  if (condition) safeShow(id); else safeHide(id);
+}
+
+// ============================================================
+// GLOBAL STATE
+// ============================================================
+const state = {
+  mode: 'stats',           // 'stats' | 'ai' | 'chat'
+  rawData: null,           // array of objects from Excel
+  headers: [],             // column headers
+  dateCol: null,           // selected date column index
+  valueCol: null,          // selected value column index
+  historicalDates: [],     // parsed date strings
+  historicalValues: [],    // parsed numeric values
+  predictions: [],         // [{period, date, value}]
+  chart: null,             // Chart.js instance
+  statsResults: null,      // last statistical result
+  chatMessages: [],        // [{role: 'user'|'ai', content: '...'}]
+  chatLoading: false,      // is chat waiting for AI response
+  tableFormat: 'simple',   // 'simple' | 'cross'
+  importFileName: null,    // last imported file name (for tracking)
+  importTime: null,        // last import timestamp
+};
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => { toast.remove(); }, 3000);
+}
+
+function show(el) { const e = document.getElementById(el); if (e) e.classList.remove('hidden'); else console.warn('[v2.0] show: not found — ' + el); }
+function hide(el) { const e = document.getElementById(el); if (e) e.classList.add('hidden'); else console.warn('[v2.0] hide: not found — ' + el); }
+function toggleShow(el, condition) { if (condition) show(el); else hide(el); }
+
+// ============================================================
+// MODE SWITCHING
+// ============================================================
+function switchMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+
+  // Toggle config tabs
+  document.getElementById('statsConfig').classList.toggle('active', mode === 'stats');
+  document.getElementById('aiConfig').classList.toggle('active', mode === 'ai');
+
+  // Show/hide run buttons
+  toggleShow('runStatsBtn', mode === 'stats');
+  toggleShow('runAiBtn', mode === 'ai');
+
+  // Toggle chat card
+  toggleShow('chatCard', mode === 'chat');
+
+  // Hide results when switching to chat (keep them for other modes)
+  if (mode === 'chat') {
+    // Trigger chat placeholder update
+    updateChatPlaceholder();
+  }
+}
+
+// ============================================================
+// SECTION 1: EXCEL IMPORT
+// ============================================================
+const importZone = document.getElementById('importZone');
+
+importZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  importZone.classList.add('drag-over');
+});
+
+importZone.addEventListener('dragleave', () => {
+  importZone.classList.remove('drag-over');
+});
+
+importZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  importZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) processFile(file);
+}
+
+
+// ============================================================
+// FORMAT DETECTION
+// ============================================================
+function detectFormat(rawArray) {
+  if (!rawArray || rawArray.length < 3) return 'simple';
+  var row0 = rawArray[0] || [];
+  var row1 = rawArray[1] || [];
+
+  var monthCount = 0;
+  var monthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
+  for (var i = 0; i < row1.length; i++) {
+    if (monthRegex.test(String(row1[i] || '').trim())) monthCount++;
+  }
+
+  var regionKeywords = ['区域','国际','日本','韩国','泰国','新加坡','越南','马来西亚','印尼','澳大利亚','新西兰','意大利','法国','英国','荷兰','西班牙','POP'];
+  var regionCount = 0;
+  for (var i = 0; i < row0.length; i++) {
+    var s = String(row0[i] || '').trim();
+    for (var k = 0; k < regionKeywords.length; k++) {
+      if (s.indexOf(regionKeywords[k]) >= 0) { regionCount++; break; }
+    }
+  }
+
+  if (monthCount >= 3 && regionCount >= 1) return 'cross';
+  return 'simple';
+}
+
+// ============================================================
+// CROSS-TABLE PARSER
+// ============================================================
+function parseCrossTable(rawArray) {
+  var row0 = rawArray[0] || [];
+  var row1 = rawArray[1] || [];
+
+  // Forward-fill row0 (merged cells -> region names)
+  var regions = [];
+  var lastRegion = '';
+  for (var i = 0; i < row0.length; i++) {
+    var val = String(row0[i] || '').trim();
+    if (val !== '') lastRegion = val;
+    regions.push(lastRegion);
+  }
+
+  // Build column mapping, skip summary cols
+  var colMap = [];
+  for (var i = 0; i < row1.length; i++) {
+    var month = String(row1[i] || '').trim();
+    if (month === '汇总' || month === '合计' || month === '总计' || month === '') {
+      colMap.push(null);
+    } else {
+      colMap.push({ region: regions[i] || '', month: month });
+    }
+  }
+
+  // Parse data rows (row 2+)
+  var records = [];
+  var lastIP = '';
+  var lastCategory = '';
+
+  for (var ri = 2; ri < rawArray.length; ri++) {
+    var dataRow = rawArray[ri];
+    if (!dataRow || dataRow.length === 0) continue;
+
+    var ip = String(dataRow[0] || '').trim();
+    var category = String(dataRow[1] || '').trim();
+    if (ip !== '') lastIP = ip;
+    if (category !== '') lastCategory = category;
+
+    if (!lastIP || lastIP === '合计' || lastIP === '汇总' || lastIP === '总计') continue;
+
+    for (var ci = 2; ci < dataRow.length; ci++) {
+      if (ci >= colMap.length) break;
+      var map = colMap[ci];
+      if (!map || !map.region) continue;
+
+      var rawVal = dataRow[ci];
+      if (rawVal === '' || rawVal === null || rawVal === undefined) continue;
+      var val = parseFloat(rawVal);
+      if (isNaN(val) || !isFinite(val) || val <= 0) continue;
+
+      records.push({
+        'IP': lastIP,
+        '品类': lastCategory || '',
+        '区域': map.region,
+        '月份': map.month,
+        '销售额': val
+      });
+    }
+  }
+
+  // Filter: keep only regions with >= 3 data records
+  var regionCounts = {};
+  for (var r = 0; r < records.length; r++) {
+    var reg = records[r]['区域'];
+    regionCounts[reg] = (regionCounts[reg] || 0) + 1;
+  }
+  var activeRegions = {};
+  for (var reg in regionCounts) {
+    if (regionCounts.hasOwnProperty(reg) && regionCounts[reg] >= 3) {
+      activeRegions[reg] = true;
+    }
+  }
+  records = records.filter(function(rec) {
+    return activeRegions[rec['区域']];
+  });
+
+  console.log('[DP Tool] 过滤后活跃区域(' + Object.keys(activeRegions).length + '个): ' + Object.keys(activeRegions).join(', '));
+
+  return records;
+}
+
+
+function processFile(file) {
+  if (!file.name.match(/\.(xlsx|xls)$/i)) {
+    showToast('请选择 .xlsx 或 .xls 文件', 'error');
+    return;
+  }
+
+  // If there's existing data, clear it first before loading new file
+  if (state.rawData && state.rawData.length > 0) {
+    clearAll();
+    showToast('⚠️ 检测到已有数据，已清除并重新导入新文件', 'info');
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+
+      // Step 1: Read raw array from first non-empty sheet
+      let rawArray = null;
+      let usedSheetName = '';
+      for (let si = 0; si < workbook.SheetNames.length; si++) {
+        const trySheet = workbook.Sheets[workbook.SheetNames[si]];
+        const tryRaw = XLSX.utils.sheet_to_json(trySheet, { header: 1, defval: '' });
+        if (tryRaw && tryRaw.length > 0) {
+          rawArray = tryRaw;
+          usedSheetName = workbook.SheetNames[si];
+          break;
+        }
+      }
+
+      if (!rawArray || rawArray.length === 0) {
+        showToast('文件中没有数据——请检查Excel内容', 'error');
+        return;
+      }
+
+      // Step 2: Detect format
+      const format = detectFormat(rawArray);
+      state.tableFormat = format;
+
+      // Step 3: Parse according to format
+      if (format === 'cross') {
+        state.rawData = parseCrossTable(rawArray);
+        state.headers = ['IP', '品类', '区域', '月份', '销售额'];
+        console.log('[DP Tool] 检测到: 交叉表格式 (工作表: ' + usedSheetName + ')');
+      } else {
+        const firstSheet = workbook.Sheets[usedSheetName || workbook.SheetNames[0]];
+        state.rawData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+        state.headers = Object.keys(state.rawData[0]);
+        console.log('[DP Tool] 检测到: 简单表格式 (工作表: ' + usedSheetName + ')');
+      }
+
+      if (!state.rawData || state.rawData.length === 0) {
+        showToast('文件中没有数据——请检查Excel内容', 'error');
+        return;
+      }
+
+      state.dateCol = null;
+      state.valueCol = null;
+
+      console.log('══════════════════════════════════');
+      console.log('[DP Tool] 文件导入: ' + file.name);
+      console.log('[DP Tool] 文件大小: ' + (file.size / 1024).toFixed(1) + ' KB');
+      console.log('[DP Tool] 表格格式: ' + format);
+      console.log('[DP Tool] 列名(表头):', state.headers);
+      console.log('[DP Tool] 数据行数:', state.rawData.length);
+      console.log('[DP Tool] 前3行数据:', JSON.stringify(state.rawData.slice(0, 3), null, 2));
+      console.log('══════════════════════════════════');
+
+      state.importFileName = file.name;
+      state.importTime = new Date().toLocaleString('zh-CN');
+
+      document.getElementById('importZone').style.display = 'none';
+      var fw = document.getElementById('fileWarning'); if (fw) fw.classList.remove('hidden');
+
+      renderColumnChips();
+      renderDataTable();
+      updateImportInfo(file.name, state.rawData.length, state.headers.length);
+      show('previewCard');
+      show('configCard');
+      showToast('成功导入 ' + state.rawData.length + ' 行数据' + (format === 'cross' ? ' [交叉表]' : '') + ' · 来源: ' + file.name, 'success');
+
+    } catch (err) {
+      showToast('文件解析失败: ' + err.message, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function updateImportInfo(filename, rows, cols) {
+  const info = document.getElementById('fileInfo');
+  if (!info) return;
+  info.classList.remove('hidden');
+  info.style.display = 'flex';
+  info.style.alignItems = 'center';
+  info.style.justifyContent = 'space-between';
+  info.style.flexWrap = 'wrap';
+  info.style.gap = '8px';
+  info.innerHTML = '<span>✅ <strong>' + filename + '</strong> — ' + rows + ' 行 × ' + cols + ' 列' + (state.tableFormat === 'cross' ? ' [交叉表]' : '') + ' · 导入: ' + state.importTime + '</span>' +
+    '<span>' +
+      '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();document.getElementById(\'fileInput\').click();" title="更换文件">🔄 更换文件</button> ' +
+      '<button class="btn btn-sm" onclick="event.stopPropagation();removeImport();" title="删除当前数据" style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;margin-left:4px;">🗑️ 删除数据</button>' +
+    '</span>';
+}
+
+function removeImport() {
+  // Clear all state
+  clearAll();
+  // Hide file info
+  const info = document.getElementById('fileInfo');
+  info.classList.add('hidden');
+  info.style.display = '';
+  // Hide warning
+  var fw2 = document.getElementById('fileWarning'); if (fw2) fw2.classList.add('hidden');
+  // Show import zone again
+  document.getElementById('importZone').style.display = '';
+  // Reset file input so same file can be re-selected
+  document.getElementById('fileInput').value = '';
+  showToast('已删除当前数据，可以重新导入', 'info');
+}
+
+// ============================================================
+// SECTION 2: COLUMN SELECTION & TABLE
+// ============================================================
+function isNumericHeader(header) {
+  // Check if the column contains mostly numeric values
+  if (!state.rawData || state.rawData.length === 0) return false;
+  let numCount = 0;
+  const sample = state.rawData.slice(0, 50);
+  for (const row of sample) {
+    const val = row[header];
+    if (val !== '' && val !== null && val !== undefined && !isNaN(parseFloat(val)) && isFinite(val)) {
+      numCount++;
+    }
+  }
+  return numCount / sample.length > 0.5;
+}
+
+function renderColumnChips() {
+  const container = document.getElementById('columnChips');
+  container.innerHTML = '';
+
+  // Label
+  const label = document.createElement('span');
+  label.style.cssText = 'font-size:11px;color:var(--text-secondary);margin-right:6px;font-weight:600;';
+  label.textContent = 'Excel第1行列名 →';
+  container.appendChild(label);
+
+  state.headers.forEach(function(header, idx) {
+    const chip = document.createElement('span');
+    chip.className = 'col-chip';
+    chip.textContent = header;
+    chip.title = 'Excel列 ' + (idx + 1) + ': 「' + header + '」\n来源：Excel 第1行（表头行）';
+
+    if (idx === state.dateCol) chip.classList.add('selected-date');
+    if (idx === state.valueCol) chip.classList.add('selected-value');
+    if (isNumericHeader(header) && idx !== state.valueCol) chip.classList.add('numeric');
+
+    chip.addEventListener('click', function() { selectColumn(idx); });
+    container.appendChild(chip);
+  });
+
+  updateColumnLabels();
+}
+
+function selectColumn(idx) {
+  // If neither selected, pick as date first
+  if (state.dateCol === null) {
+    state.dateCol = idx;
+    // Auto-detect value column: first numeric column that isn't the date
+    state.headers.forEach((h, i) => {
+      if (i !== idx && isNumericHeader(h) && state.valueCol === null) {
+        state.valueCol = i;
+      }
+    });
+  } else if (idx === state.dateCol) {
+    state.dateCol = null;
+  } else if (idx === state.valueCol) {
+    state.valueCol = null;
+  } else {
+    state.valueCol = idx;
+  }
+
+  renderColumnChips();
+  renderDataTable();
+  updateColumnLabels();
+
+  if (state.dateCol !== null && state.valueCol !== null) {
+    prepareDataSeries();
+  }
+}
+
+function updateColumnLabels() {
+  document.getElementById('dateColLabel').textContent =
+    state.dateCol !== null ? state.headers[state.dateCol] : '未选择';
+  document.getElementById('valueColLabel').textContent =
+    state.valueCol !== null ? state.headers[state.valueCol] : '未选择';
+}
+
+function renderDataTable() {
+  const thead = document.querySelector('#dataTable thead');
+  const tbody = document.querySelector('#dataTable tbody');
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
+
+  // ---- Row 1: Column headers (this IS Excel Row 1) ----
+  const headerTr = document.createElement('tr');
+  headerTr.style.cssText = 'background:#f1f5f9;';
+  headerTr.innerHTML = '<th style="width:70px;font-size:11px;">📌 来源</th>';
+  state.headers.forEach((h, i) => {
+    let icon = '';
+    if (i === state.dateCol) icon = ' 📅';
+    if (i === state.valueCol) icon = ' 📊';
+    headerTr.innerHTML += '<th>' + h + icon + '</th>';
+  });
+  thead.appendChild(headerTr);
+
+  // ---- Row 2: Sub-header explaining this is column definition ----
+  const subTr = document.createElement('tr');
+  subTr.style.cssText = 'background:#eff6ff;font-size:10px;';
+  subTr.innerHTML = '<td style="color:#2563eb;font-weight:700;">Excel 第1行 ⬅ 列定义</td>';
+  state.headers.forEach(function() {
+    subTr.innerHTML += '<td style="color:#64748b;">↑ 表头 / 字段名</td>';
+  });
+  thead.appendChild(subTr);
+
+  // ---- Data rows (Excel Row 2, 3, 4 ...) ----
+  const preview = state.rawData.slice(0, 100);
+  preview.forEach(function(row, ri) {
+    const excelRowNum = ri + 2;
+    const r = document.createElement('tr');
+    r.innerHTML = '<td style="color:var(--text-secondary);font-weight:600;font-size:11px;">Excel 第' + excelRowNum + '行</td>';
+    state.headers.forEach(function(h, i) {
+      let style = '';
+      if (i === state.dateCol) style = 'background:#f0f7ff;';
+      if (i === state.valueCol) style = 'background:#f0fdf4;';
+      const val = row[h];
+      const display = (val === '' || val === null || val === undefined) ? '<span style="color:#cbd5e1;">-</span>' : val;
+      r.innerHTML += '<td style="' + style + '">' + display + '</td>';
+    });
+    tbody.appendChild(r);
+  });
+
+  document.getElementById('rowCount').textContent =
+    '（共 ' + state.rawData.length + ' 条数据，对应 Excel 第2~' + (state.rawData.length + 1) + '行，显示前 ' + preview.length + ' 行）';
+}
+
+function prepareDataSeries() {
+  const dateHeader = state.headers[state.dateCol];
+  const valueHeader = state.headers[state.valueCol];
+
+  state.historicalDates = [];
+  state.historicalValues = [];
+
+  for (const row of state.rawData) {
+    const rawDate = row[dateHeader];
+    const rawValue = row[valueHeader];
+
+    if (rawValue === '' || rawValue === null || rawValue === undefined) continue;
+
+    const numVal = parseFloat(rawValue);
+    if (isNaN(numVal) || !isFinite(numVal)) continue;
+
+    let dateStr = String(rawDate);
+    // Try to parse date
+    if (!isNaN(Date.parse(dateStr))) {
+      const d = new Date(dateStr);
+      dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    state.historicalDates.push(dateStr);
+    state.historicalValues.push(numVal);
+  }
+
+  // Clear previous results
+  clearResults();
+}
+
+// ============================================================
+// SECTION 3: STATISTICAL ENGINE
+// ============================================================
+
+// --- Moving Average ---
+function movingAverage(values, window, periods) {
+  const predictions = [];
+  let working = [...values];
+
+  for (let p = 0; p < periods; p++) {
+    const subset = working.slice(-window);
+    const avg = subset.reduce((a, b) => a + b, 0) / subset.length;
+    predictions.push(parseFloat(avg.toFixed(2)));
+    working.push(avg);
+  }
+  return predictions;
+}
+
+// --- Linear Regression ---
+function linearRegression(values, periods) {
+  const n = values.length;
+  const xs = Array.from({ length: n }, (_, i) => i);
+  const ys = values;
+
+  const sumX = xs.reduce((a, b) => a + b, 0);
+  const sumY = ys.reduce((a, b) => a + b, 0);
+  const sumXY = xs.reduce((s, x, i) => s + x * ys[i], 0);
+  const sumXX = xs.reduce((s, x) => s + x * x, 0);
+
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+
+  // R-squared
+  const yMean = sumY / n;
+  const ssTot = ys.reduce((s, y) => s + Math.pow(y - yMean, 2), 0);
+  const ssRes = ys.reduce((s, y, i) => s + Math.pow(y - (slope * xs[i] + intercept), 2), 0);
+  const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+
+  const predictions = [];
+  for (let i = 0; i < periods; i++) {
+    const x = n + i;
+    predictions.push(parseFloat((slope * x + intercept).toFixed(2)));
+  }
+
+  // Calculate fitted values for metrics
+  const fitted = xs.map(x => parseFloat((slope * x + intercept).toFixed(2)));
+
+  return { predictions, slope, intercept, rSquared, fitted };
+}
+
+// --- Exponential Smoothing (Double / Holt's) ---
+function exponentialSmoothing(values, alpha, periods, beta = 0.1) {
+  const n = values.length;
+
+  // Initialize
+  let level = values[0];
+  let trend = n > 1 ? values[1] - values[0] : 0;
+
+  const fitted = [parseFloat(level.toFixed(2))];
+
+  for (let i = 1; i < n; i++) {
+    const prevLevel = level;
+    level = alpha * values[i] + (1 - alpha) * (level + trend);
+    trend = beta * (level - prevLevel) + (1 - beta) * trend;
+    fitted.push(parseFloat((prevLevel + trend).toFixed(2)));
+  }
+
+  // Forecast
+  const predictions = [];
+  for (let k = 1; k <= periods; k++) {
+    predictions.push(parseFloat((level + k * trend).toFixed(2)));
+  }
+
+  return { predictions, level, trend, alpha, beta, fitted };
+}
+
+// --- Accuracy Metrics ---
+function calculateMetrics(actual, predicted) {
+  const n = Math.min(actual.length, predicted.length);
+  if (n === 0) return { MSE: 0, MAE: 0, MAPE: 0 };
+
+  let sumSE = 0, sumAE = 0, sumAPE = 0;
+  for (let i = 0; i < n; i++) {
+    const err = actual[i] - predicted[i];
+    sumSE += err * err;
+    sumAE += Math.abs(err);
+    if (actual[i] !== 0) sumAPE += Math.abs(err / actual[i]);
+  }
+
+  return {
+    MSE: parseFloat((sumSE / n).toFixed(4)),
+    RMSE: parseFloat((Math.sqrt(sumSE / n)).toFixed(4)),
+    MAE: parseFloat((sumAE / n).toFixed(4)),
+    MAPE: parseFloat(((sumAPE / n) * 100).toFixed(2)),
+  };
+}
+
+// --- Main Statistical Runner ---
+function runStatisticalPrediction() {
+  if (state.historicalValues.length < 3) {
+    showToast('数据不足，至少需要3个数据点进行预测', 'error');
+    return;
+  }
+
+  const periods = parseInt(document.getElementById('forecastPeriods').value) || 6;
+  const method = document.getElementById('statsMethod').value;
+
+  let result;
+  let methodName = '';
+
+  switch (method) {
+    case 'ma': {
+      const window = parseInt(document.getElementById('maWindow').value) || 3;
+      const preds = movingAverage(state.historicalValues, window, periods);
+      result = { predictions: preds, method: '移动平均', window };
+      methodName = `移动平均 (窗口=${window})`;
+      break;
+    }
+    case 'lr': {
+      const lr = linearRegression(state.historicalValues, periods);
+      const metrics = calculateMetrics(state.historicalValues, lr.fitted);
+      result = {
+        predictions: lr.predictions,
+        method: '线性回归',
+        slope: lr.slope,
+        intercept: lr.intercept,
+        rSquared: lr.rSquared,
+        fitted: lr.fitted,
+        metrics,
+      };
+      methodName = `线性回归 (R²=${lr.rSquared.toFixed(4)})`;
+      break;
+    }
+    case 'es': {
+      const alpha = parseFloat(document.getElementById('esAlpha').value) || 0.3;
+      const es = exponentialSmoothing(state.historicalValues, alpha, periods);
+      const metrics = calculateMetrics(state.historicalValues, es.fitted);
+      result = {
+        predictions: es.predictions,
+        method: '指数平滑',
+        alpha,
+        beta: es.beta,
+        fitted: es.fitted,
+        metrics,
+      };
+      methodName = `指数平滑 (α=${alpha})`;
+      break;
+    }
+    default:
+      showToast('未知预测方法', 'error');
+      return;
+  }
+
+  state.statsResults = result;
+  state.predictions = buildPredictionArray(result.predictions, periods);
+
+  renderResults(methodName, result);
+  showToast('预测完成！', 'success');
+}
+
+function buildPredictionArray(predictionValues, periods) {
+  const preds = [];
+  const lastDate = state.historicalDates.length > 0
+    ? new Date(state.historicalDates[state.historicalDates.length - 1])
+    : new Date();
+
+  // Try to detect date interval
+  let intervalDays = 30; // default monthly
+  if (state.historicalDates.length >= 2) {
+    const d1 = new Date(state.historicalDates[state.historicalDates.length - 2]);
+    const d2 = new Date(state.historicalDates[state.historicalDates.length - 1]);
+    intervalDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+    if (intervalDays < 1) intervalDays = 1;
+  }
+
+  for (let i = 0; i < periods; i++) {
+    const predDate = new Date(lastDate);
+    predDate.setDate(predDate.getDate() + intervalDays * (i + 1));
+    const dateStr = `${predDate.getFullYear()}-${String(predDate.getMonth()+1).padStart(2,'0')}-${String(predDate.getDate()).padStart(2,'0')}`;
+    preds.push({
+      period: i + 1,
+      date: dateStr,
+      value: predictionValues[i],
+    });
+  }
+  return preds;
+}
+
+// ============================================================
+// SECTION 4: AI ENGINE
+// ============================================================
+async function runAIPrediction() {
+  const apiUrl = document.getElementById('aiApiUrl').value.trim();
+  const apiKey = document.getElementById('aiApiKey').value.trim();
+  const model = document.getElementById('aiModel').value.trim();
+  const periods = parseInt(document.getElementById('aiForecastPeriods').value) || 6;
+
+  if (!apiUrl) { showToast('请输入 API 地址', 'error'); return; }
+  if (!apiKey) { showToast('请输入 API Key', 'error'); return; }
+  if (state.historicalValues.length < 3) {
+    showToast('数据不足，至少需要3个数据点进行预测', 'error');
+    return;
+  }
+
+  const statusEl = document.getElementById('apiStatus');
+  statusEl.className = 'api-status loading';
+  statusEl.textContent = '⏳ 正在调用 AI API...';
+
+  const runBtn = document.getElementById('runAiBtn');
+  runBtn.disabled = true;
+  runBtn.textContent = '预测中...';
+
+  try {
+    // Build historical data for prompt
+    const dataPairs = state.historicalDates.map((d, i) =>
+      `${d}: ${state.historicalValues[i]}`
+    ).join('\n');
+
+    const lastValues = state.historicalValues.slice(-10);
+    const trend = lastValues[lastValues.length - 1] > lastValues[0] ? '上升' : '下降';
+    const avgVal = (state.historicalValues.reduce((a, b) => a + b, 0) / state.historicalValues.length).toFixed(2);
+
+    const prompt = `你是一名专业的商品订货预测分析师。请基于以下历史订货数据，预测未来 ${periods} 个周期的数值。
+
+历史数据（日期: 数值）：
+${dataPairs}
+
+数据统计：
+- 数据点数: ${state.historicalValues.length}
+- 平均值: ${avgVal}
+- 近期趋势: ${trend}
+- 最大值: ${Math.max(...state.historicalValues)}
+- 最小值: ${Math.min(...state.historicalValues)}
+
+请分析数据的趋势、季节性和模式，然后给出未来 ${periods} 个周期的预测值。
+
+重要：请严格以JSON数组格式返回预测结果，不要包含其他文字。格式示例：
+[123.45, 126.78, 130.12, 133.45, 136.78, 140.00]`;
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'system', content: '你是一个专业的数据预测助手。只返回JSON数组格式的预测结果。' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      throw new Error(`API 返回错误 ${response.status}: ${errBody.substring(0, 200)}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+
+    // Parse JSON array from response
+    let predictions;
+    const jsonMatch = content.match(/\[[\d.,\s]+\]/);
+    if (jsonMatch) {
+      predictions = JSON.parse(jsonMatch[0]);
+    } else {
+      // Try to extract numbers
+      const numbers = content.match(/-?\d+\.?\d*/g);
+      if (numbers && numbers.length >= periods) {
+        predictions = numbers.slice(0, periods).map(Number);
+      } else {
+        throw new Error('无法从AI响应中解析预测数据');
+      }
+    }
+
+    if (predictions.length < periods) {
+      throw new Error(`AI仅返回了${predictions.length}个预测值，需要${periods}个`);
+    }
+
+    predictions = predictions.slice(0, periods).map(v => parseFloat(Number(v).toFixed(2)));
+
+    state.predictions = buildPredictionArray(predictions, periods);
+    state.statsResults = {
+      predictions,
+      method: 'AI智能预测',
+      model,
+    };
+
+    renderResults(`AI智能预测 (${model})`, state.statsResults);
+
+    statusEl.className = 'api-status success';
+    statusEl.textContent = `✅ AI预测成功！模型: ${model}`;
+    showToast('AI预测完成！', 'success');
+
+  } catch (err) {
+    statusEl.className = 'api-status error';
+    statusEl.textContent = `❌ 预测失败: ${err.message}`;
+    showToast('AI预测失败: ' + err.message, 'error');
+    console.error(err);
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = '🤖 开始 AI 预测';
+  }
+}
+
+// ============================================================
+// SECTION 5: RENDER RESULTS (Chart + Table + Metrics)
+// ============================================================
+function renderResults(methodLabel, result) {
+  // Show cards
+  show('chartCard');
+  show('resultsCard');
+
+  document.getElementById('chartMethodLabel').textContent = `· ${methodLabel}`;
+
+  // Build full data for chart
+  const histLabels = [...state.historicalDates];
+  const histValues = [...state.historicalValues];
+
+  // Add prediction points
+  const predLabels = state.predictions.map(p => p.date);
+  const predValues = state.predictions.map(p => p.value);
+
+  // Last historical point connection
+  const chartLabels = [...histLabels];
+  const chartHistData = [...histValues, null]; // gap before predictions
+  // Actually, let's use separate datasets in Chart.js
+
+  renderChart(histLabels, histValues, predLabels, predValues, methodLabel);
+  renderMetrics(result);
+  renderResultsTable();
+  renderPredictionHighlight();
+}
+
+function renderChart(histLabels, histData, predLabels, predData, methodLabel) {
+  const ctx = document.getElementById('predictionChart').getContext('2d');
+
+  if (state.chart) state.chart.destroy();
+
+  // Combine for x-axis
+  const allLabels = [...histLabels, ...predLabels];
+
+  // Historical dataset
+  const histDataset = [...histData];
+  // Extend with nulls for prediction positions
+  while (histDataset.length < allLabels.length) histDataset.push(null);
+
+  // Prediction dataset
+  const predDataset = [];
+  // Nulls for historical positions, but the last hist point connects
+  for (let i = 0; i < histData.length - 1; i++) predDataset.push(null);
+  predDataset.push(histData[histData.length - 1]); // connection point
+  for (const v of predData) predDataset.push(v);
+
+  // Confidence band (simple ±5%)
+  const upperBound = [];
+  const lowerBound = [];
+  for (let i = 0; i < allLabels.length; i++) {
+    if (predDataset[i] !== null && predDataset[i] !== undefined) {
+      upperBound.push(parseFloat((predDataset[i] * 1.05).toFixed(2)));
+      lowerBound.push(parseFloat((predDataset[i] * 0.95).toFixed(2)));
+    } else if (histDataset[i] !== null && histDataset[i] !== undefined) {
+      upperBound.push(null);
+      lowerBound.push(null);
+    } else {
+      upperBound.push(null);
+      lowerBound.push(null);
+    }
+  }
+
+  state.chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: allLabels,
+      datasets: [
+        {
+          label: '历史数据',
+          data: histDataset,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37,99,235,0.1)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#2563eb',
+          tension: 0.3,
+          fill: false,
+        },
+        {
+          label: '预测数据',
+          data: predDataset,
+          borderColor: '#dc2626',
+          backgroundColor: 'rgba(220,38,38,0.05)',
+          borderWidth: 2.5,
+          borderDash: [8, 4],
+          pointRadius: 4,
+          pointBackgroundColor: '#dc2626',
+          pointBorderColor: 'white',
+          pointBorderWidth: 2,
+          tension: 0.3,
+          fill: false,
+        },
+        {
+          label: '置信上界 (+5%)',
+          data: upperBound,
+          borderColor: 'rgba(220,38,38,0.2)',
+          borderWidth: 1,
+          borderDash: [3, 3],
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false,
+        },
+        {
+          label: '置信下界 (-5%)',
+          data: lowerBound,
+          borderColor: 'rgba(220,38,38,0.2)',
+          borderWidth: 1,
+          borderDash: [3, 3],
+          pointRadius: 0,
+          tension: 0.3,
+          fill: '+1', // fill to upper bound
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+        mode: 'index',
+      },
+      plugins: {
+        title: {
+          display: true,
+          text: methodLabel,
+          font: { size: 14, weight: '600' },
+          color: '#1e293b',
+        },
+        legend: {
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            padding: 20,
+            font: { size: 12 },
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const lbl = ctx.dataset.label || '';
+              const val = ctx.parsed.y;
+              if (val === null || val === undefined) return '';
+              return `${lbl}: ${val.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: '日期', font: { size: 12 } },
+          ticks: { maxTicksLimit: 20, font: { size: 10 } },
+        },
+        y: {
+          title: { display: true, text: '数值', font: { size: 12 } },
+          beginAtZero: false,
+          ticks: {
+            font: { size: 10 },
+            callback: (v) => v.toLocaleString('zh-CN'),
+          },
+        },
+      },
+    },
+  });
+}
+
+function renderMetrics(result) {
+  show('metricsCard');
+  const grid = document.getElementById('metricsGrid');
+  grid.innerHTML = '';
+
+  let metrics = result.metrics;
+
+  // Calculate metrics if not provided
+  if (!metrics && result.fitted) {
+    metrics = calculateMetrics(state.historicalValues, result.fitted);
+  }
+
+  // Always calculate simple metrics
+  if (!metrics) {
+    const half = Math.floor(state.historicalValues.length / 2);
+    const train = state.historicalValues.slice(0, half);
+    const actual = state.historicalValues.slice(half);
+    // Simple MA for mock metrics
+    const mockPred = movingAverage(train, Math.min(3, train.length), actual.length);
+    metrics = calculateMetrics(actual, mockPred);
+  }
+
+  const metricItems = [
+    { value: metrics.MAE?.toFixed(2) || '-', label: 'MAE (平均绝对误差)' },
+    { value: metrics.RMSE?.toFixed(2) || '-', label: 'RMSE (均方根误差)' },
+    { value: metrics.MAPE !== undefined ? metrics.MAPE + '%' : '-', label: 'MAPE (平均百分比误差)' },
+  ];
+
+  if (result.rSquared !== undefined) {
+    metricItems.push({ value: result.rSquared.toFixed(4), label: 'R² (拟合优度)' });
+  }
+
+  if (result.method === '指数平滑') {
+    metricItems.push({ value: result.alpha.toFixed(2), label: 'α (平滑系数)' });
+  }
+
+  metricItems.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'metric-card';
+    card.innerHTML = `<div class="metric-value">${m.value}</div><div class="metric-label">${m.label}</div>`;
+    grid.appendChild(card);
+  });
+}
+
+function renderResultsTable() {
+  const thead = document.querySelector('#resultsTable thead');
+  const tbody = document.querySelector('#resultsTable tbody');
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
+
+  thead.innerHTML = `
+    <tr>
+      <th>类型</th>
+      <th>周期</th>
+      <th>日期</th>
+      <th>数值</th>
+      <th>变化</th>
+    </tr>
+  `;
+
+  const lastHistorical = state.historicalValues[state.historicalValues.length - 1];
+
+  state.predictions.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    const prevVal = i === 0 ? lastHistorical : state.predictions[i - 1].value;
+    const change = p.value - prevVal;
+    const changePct = prevVal !== 0 ? ((change / prevVal) * 100).toFixed(2) : 0;
+
+    const changeClass = change >= 0 ? 'change-up' : 'change-down';
+    const changeSign = change >= 0 ? '+' : '';
+
+    tr.innerHTML = `
+      <td><span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">预测</span></td>
+      <td>第 ${p.period} 期</td>
+      <td>${p.date}</td>
+      <td style="font-weight:700;">${p.value.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</td>
+      <td class="${changeClass}">${changeSign}${change.toFixed(2)} (${changeSign}${changePct}%)</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Add last 5 historical rows for context
+  const showHist = state.historicalDates.slice(-5);
+  const showVals = state.historicalValues.slice(-5);
+  for (let i = showHist.length - 1; i >= 0; i--) {
+    const tr = document.createElement('tr');
+    const idx = state.historicalDates.length - showHist.length + i + 1;
+    tr.style.opacity = '0.7';
+    tr.innerHTML = `
+      <td><span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">历史</span></td>
+      <td>第 ${idx} 期</td>
+      <td>${showHist[i]}</td>
+      <td>${showVals[i].toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</td>
+      <td>-</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function renderPredictionHighlight() {
+  const container = document.getElementById('predictionHighlight');
+  container.innerHTML = '<h3>🔮 未来预测概览</h3>';
+
+  const list = document.createElement('div');
+  list.className = 'prediction-list';
+
+  const lastVal = state.historicalValues[state.historicalValues.length - 1];
+
+  state.predictions.forEach((p, i) => {
+    const change = p.value - lastVal;
+    const changePct = lastVal !== 0 ? ((change / lastVal) * 100).toFixed(1) : 0;
+    const changeClass = change >= 0 ? 'change-up' : 'change-down';
+    const changeSign = change >= 0 ? '+' : '';
+    const arrow = change >= 0 ? '↑' : '↓';
+
+    const item = document.createElement('div');
+    item.className = 'prediction-item';
+    item.innerHTML = `
+      <div class="period">第 ${p.period} 期 ${arrow}</div>
+      <div class="value">${p.value.toLocaleString('zh-CN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
+      <div class="change ${changeClass}">${changeSign}${changePct}%</div>
+    `;
+    list.appendChild(item);
+  });
+
+  container.appendChild(list);
+}
+
+// ============================================================
+// SECTION 6: EXPORT
+// ============================================================
+function exportResults() {
+  if (!state.predictions || state.predictions.length === 0) {
+    showToast('没有可导出的预测结果', 'error');
+    return;
+  }
+
+  try {
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Full data (historical + predictions)
+    const fullData = [];
+
+    // Historical rows
+    state.historicalDates.forEach((d, i) => {
+      fullData.push({
+        '类型': '历史',
+        '周期': i + 1,
+        '日期': d,
+        '数值': state.historicalValues[i],
+        '变化': '',
+      });
+    });
+
+    // Prediction rows
+    const lastVal = state.historicalValues[state.historicalValues.length - 1];
+    state.predictions.forEach((p, i) => {
+      const prevVal = i === 0 ? lastVal : state.predictions[i - 1].value;
+      const change = p.value - prevVal;
+      const changePct = prevVal !== 0 ? ((change / prevVal) * 100).toFixed(2) + '%' : '0%';
+      fullData.push({
+        '类型': '预测',
+        '周期': `第${p.period}期`,
+        '日期': p.date,
+        '数值': p.value,
+        '变化': `${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePct})`,
+      });
+    });
+
+    const ws1 = XLSX.utils.json_to_sheet(fullData);
+    ws1['!cols'] = [
+      { wch: 8 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 18 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws1, '历史数据与预测');
+
+    // Sheet 2: Summary
+    const method = state.statsResults?.method || '未知';
+    const summaryData = [
+      { '项目': '预测方法', '值': method },
+      { '项目': '历史数据点数', '值': state.historicalValues.length },
+      { '项目': '预测周期数', '值': state.predictions.length },
+      { '项目': '历史平均值', '值': (state.historicalValues.reduce((a,b) => a+b, 0) / state.historicalValues.length).toFixed(2) },
+      { '项目': '历史最大值', '值': Math.max(...state.historicalValues) },
+      { '项目': '历史最小值', '值': Math.min(...state.historicalValues) },
+      { '项目': '', '值': '' },
+    ];
+
+    if (state.statsResults?.rSquared !== undefined) {
+      summaryData.push({ '项目': 'R² (拟合优度)', '值': state.statsResults.rSquared.toFixed(4) });
+    }
+    if (state.statsResults?.metrics) {
+      summaryData.push({ '项目': 'MAE', '值': state.statsResults.metrics.MAE?.toFixed(2) || '-' });
+      summaryData.push({ '项目': 'RMSE', '值': state.statsResults.metrics.RMSE?.toFixed(2) || '-' });
+      summaryData.push({ '项目': 'MAPE', '值': (state.statsResults.metrics.MAPE || '-') + '%' });
+    }
+
+    const ws2 = XLSX.utils.json_to_sheet(summaryData);
+    ws2['!cols'] = [{ wch: 20 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, ws2, '预测摘要');
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+    XLSX.writeFile(wb, `APAC新品订货预测结果_${timestamp}.xlsx`);
+
+    showToast('Excel 导出成功！', 'success');
+  } catch (err) {
+    showToast('导出失败: ' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+function exportChartImage() {
+  if (!state.chart) {
+    showToast('没有可导出的图表', 'error');
+    return;
+  }
+
+  const link = document.createElement('a');
+  link.download = '预测图表.png';
+  link.href = state.chart.toBase64Image('image/png', 1.0);
+  link.click();
+  showToast('图表已导出！', 'success');
+}
+
+function clearResults() {
+  hide('chartCard');
+  hide('metricsCard');
+  hide('resultsCard');
+  document.getElementById('apiStatus').textContent = '';
+  document.getElementById('apiStatus').className = 'api-status';
+  state.predictions = [];
+  state.statsResults = null;
+  if (state.chart) { state.chart.destroy(); state.chart = null; }
+}
+
+function clearAll() {
+  clearResults();
+  hide('previewCard');
+  hide('configCard');
+  var fi = document.getElementById('fileInfo');
+  if (fi) { fi.classList.add('hidden'); fi.style.display = ''; }
+  var fw = document.getElementById('fileWarning');
+  if (fw) fw.classList.add('hidden');
+  var iz = document.getElementById('importZone');
+  if (iz) iz.style.display = '';
+  var fi2 = document.getElementById('fileInput');
+  if (fi2) fi2.value = '';
+  state.tableFormat = 'simple';
+  state.rawData = null;
+  state.headers = [];
+  state.dateCol = null;
+  state.valueCol = null;
+  state.historicalDates = [];
+  state.historicalValues = [];
+  var dt = document.querySelector('#dataTable thead');
+  if (dt) dt.innerHTML = '';
+  var db = document.querySelector('#dataTable tbody');
+  if (db) db.innerHTML = '';
+  var cc = document.getElementById('columnChips');
+  if (cc) cc.innerHTML = '';
+  var dl = document.getElementById('dateColLabel');
+  if (dl) dl.textContent = '未选择';
+  var vl = document.getElementById('valueColLabel');
+  if (vl) vl.textContent = '未选择';
+  showToast('已重置', 'info');
+}
+
+// ============================================================
+// SECTION 7: AI CHAT
+// ============================================================
+
+function updateChatPlaceholder() {
+  const placeholder = document.getElementById('chatPlaceholder');
+  const quickActions = document.getElementById('chatQuickActions');
+  if (!placeholder) return;
+
+  if (state.historicalValues.length > 0) {
+    placeholder.innerHTML = `
+      <div class="icon">📊</div>
+      <p>已加载 <strong>${state.historicalValues.length}</strong> 条数据</p>
+      <p style="font-size:12px;margin-top:4px;">你可以直接提问，或点击下方的快捷按钮</p>
+    `;
+    quickActions.classList.remove('hidden');
+  } else {
+    placeholder.innerHTML = `
+      <div class="icon">🤖</div>
+      <p>AI 助手可以帮你分析销售趋势和订货策略</p>
+      <p style="font-size:12px;margin-top:4px;">请先导入 Excel 数据，然后开始对话</p>
+    `;
+    quickActions.classList.add('hidden');
+  }
+}
+
+function getChatContext() {
+  if (state.historicalValues.length === 0) return '';
+
+  const dateCol = state.dateCol !== null ? state.headers[state.dateCol] : '日期';
+  const valueCol = state.valueCol !== null ? state.headers[state.valueCol] : '数值';
+
+  let ctx = `## 已导入的销售数据概况\n`;
+  ctx += `- 数据列: ${dateCol} / ${valueCol}\n`;
+  ctx += `- 数据点数: ${state.historicalValues.length}\n`;
+  ctx += `- 时间范围: ${state.historicalDates[0]} 至 ${state.historicalDates[state.historicalDates.length - 1]}\n`;
+  ctx += `- 平均值: ${(state.historicalValues.reduce((a,b)=>a+b,0)/state.historicalValues.length).toFixed(2)}\n`;
+  ctx += `- 最大值: ${Math.max(...state.historicalValues)} (${state.historicalDates[state.historicalValues.indexOf(Math.max(...state.historicalValues))]})\n`;
+  ctx += `- 最小值: ${Math.min(...state.historicalValues)} (${state.historicalDates[state.historicalValues.indexOf(Math.min(...state.historicalValues))]})\n`;
+  ctx += `- 最近值: ${state.historicalValues[state.historicalValues.length-1]}\n`;
+  ctx += `- 趋势: ${state.historicalValues[state.historicalValues.length-1] > state.historicalValues[0] ? '整体上升' : '整体下降'}\n`;
+
+  // Add last 12 data points
+  const showCount = Math.min(12, state.historicalValues.length);
+  ctx += `\n最近 ${showCount} 期数据:\n`;
+  for (let i = state.historicalValues.length - showCount; i < state.historicalValues.length; i++) {
+    ctx += `- ${state.historicalDates[i]}: ${state.historicalValues[i]}\n`;
+  }
+
+  // Add prediction results if available
+  if (state.predictions.length > 0) {
+    ctx += `\n## 现有预测结果\n`;
+    state.predictions.forEach(p => {
+      const prevVal = p.period === 1 ? state.historicalValues[state.historicalValues.length-1] : state.predictions[p.period-2].value;
+      const change = ((p.value - prevVal) / Math.abs(prevVal) * 100).toFixed(1);
+      ctx += `- 第${p.period}期 (${p.date}): ${p.value} (${change >= 0 ? '+' : ''}${change}%)\n`;
+    });
+  }
+
+  return ctx;
+}
+
+function buildChatConversation() {
+  return state.chatMessages.map(m => ({
+    role: m.role === 'user' ? 'user' : 'assistant',
+    content: m.content,
+  }));
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('chatSendBtn');
+  const msg = input.value.trim();
+
+  if (!msg || state.chatLoading) return;
+
+  // Check API config
+  const apiUrl = document.getElementById('aiApiUrl').value.trim();
+  const apiKey = document.getElementById('aiApiKey').value.trim();
+  const model = document.getElementById('aiModel').value.trim() || 'gpt-4o';
+
+  if (!apiUrl || !apiKey) {
+    showToast('请先在「AI 智能预测」标签页中配置 API 地址和 Key', 'error');
+    switchMode('ai');
+    return;
+  }
+
+  if (state.historicalValues.length === 0) {
+    showToast('请先导入 Excel 数据', 'error');
+    return;
+  }
+
+  // Add user message
+  state.chatMessages.push({ role: 'user', content: msg });
+  input.value = '';
+  state.chatLoading = true;
+  sendBtn.disabled = true;
+  sendBtn.textContent = '...';
+
+  renderChatMessages();
+  hide(document.getElementById('chatPlaceholder'));
+
+  // Show typing indicator
+  const msgContainer = document.getElementById('chatMessages');
+  const typingEl = document.createElement('div');
+  typingEl.className = 'chat-msg ai';
+  typingEl.id = 'typingIndicator';
+  typingEl.innerHTML = `
+    <div class="chat-avatar">🤖</div>
+    <div class="chat-bubble">
+      <div class="typing-indicator">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  `;
+  msgContainer.appendChild(typingEl);
+  msgContainer.scrollTop = msgContainer.scrollHeight;
+
+  try {
+    const dataContext = getChatContext();
+    const conversation = buildChatConversation();
+
+    const systemPrompt = `你是一名专业的APAC商品部新品订货预测分析师。你的职责是：
+1. 分析用户的销售和订货历史数据，提供专业的趋势解读
+2. 针对新品订货策略给出建设性建议
+3. 识别数据中的异常值、季节性规律、增长趋势等
+4. 用数据和事实说话，引用具体数值
+5. 回答简洁专业，使用中文
+
+当前的上下文数据：
+${dataContext}
+
+请基于以上数据回答用户的问题。如果用户问的是预测相关问题，请结合数据趋势给出分析。`;
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...conversation,
+    ];
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
+    });
+
+    // Remove typing indicator
+    const typing = document.getElementById('typingIndicator');
+    if (typing) typing.remove();
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      throw new Error(`API 返回错误 ${response.status}: ${errBody.substring(0, 200)}`);
+    }
+
+    const data = await response.json();
+    const aiContent = data.choices?.[0]?.message?.content || '（未收到回复，请重试）';
+
+    state.chatMessages.push({ role: 'ai', content: aiContent });
+    renderChatMessages();
+
+  } catch (err) {
+    const typing = document.getElementById('typingIndicator');
+    if (typing) typing.remove();
+    state.chatMessages.push({ role: 'ai', content: `❌ 请求失败: ${err.message}\n\n请检查 API 配置是否正确，或切换到「统计预测」模式。` });
+    renderChatMessages();
+    console.error(err);
+  } finally {
+    state.chatLoading = false;
+    sendBtn.disabled = false;
+    sendBtn.textContent = '发送 ➤';
+    const msgCont = document.getElementById('chatMessages');
+    msgCont.scrollTop = msgCont.scrollHeight;
+  }
+}
+
+function renderChatMessages() {
+  const container = document.getElementById('chatMessages');
+
+  // Clear existing messages (keep typing indicator during loading)
+  const typingEl = document.getElementById('typingIndicator');
+  container.innerHTML = '';
+  if (typingEl) container.appendChild(typingEl);
+
+  // Hide placeholder when there are messages
+  const placeholder = document.getElementById('chatPlaceholder');
+  if (state.chatMessages.length === 0 && !state.chatLoading) {
+    if (placeholder) placeholder.style.display = '';
+    return;
+  }
+  if (placeholder) placeholder.style.display = 'none';
+
+  state.chatMessages.forEach(msg => {
+    const div = document.createElement('div');
+    div.className = `chat-msg ${msg.role}`;
+    const avatar = msg.role === 'user' ? '👤' : '🤖';
+
+    // Convert simple markdown-like content to HTML
+    let content = msg.content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`(.+?)`/g, '<code>$1</code>')
+      .replace(/^### (.+)$/gm, '<strong>$1</strong>')
+      .replace(/^- (.+)$/gm, '• $1')
+      .replace(/\n/g, '<br>');
+
+    div.innerHTML = `
+      <div class="chat-avatar">${avatar}</div>
+      <div class="chat-bubble">${content}</div>
+    `;
+    container.appendChild(div);
+  });
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function askQuickQuestion(type) {
+  const questions = {
+    trend: '请详细分析历史销售数据的整体趋势，包括增长阶段、波动特征和关键转折点。',
+    season: '请分析数据中是否存在季节性规律或周期性波动，并给出下个周期的订货节奏建议。',
+    newproduct: '基于现有销售数据趋势，请给出新品订货的策略建议，包括首批订货量、备货周期和风险提示。',
+    summary: '请对当前导入的全部数据做一个全面的总结概览，包括关键指标、趋势判断和重点关注事项。',
+  };
+
+  const q = questions[type];
+  if (q) {
+    document.getElementById('chatInput').value = q;
+    sendMessage();
+  }
+}
+
+// Update chat placeholder when data is prepared
+const origPrepareDataSeries = prepareDataSeries;
+prepareDataSeries = function() {
+  origPrepareDataSeries();
+  updateChatPlaceholder();
+};
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+
+// Stats method change → show/hide extra options
+document.getElementById('statsMethod').addEventListener('change', function() {
+  document.getElementById('maWindowGroup').style.display = this.value === 'ma' ? '' : 'none';
+  document.getElementById('esAlphaGroup').style.display = this.value === 'es' ? '' : 'none';
+});
+
+// Enter key on API key field
+document.getElementById('aiApiKey').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') runAIPrediction();
+});
+
+// Initialize
+switchMode('stats');
+</script>
+
+</body>
+</html>
