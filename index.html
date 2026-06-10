@@ -1269,24 +1269,10 @@ function getDataContext() {
   var ctx = '## 当前已导入数据概况\n';
   ctx += '文件: ' + (state.importFileName || '未知') + '\n';
   ctx += '总行数: ' + state.rawData.length + '\n';
-  ctx += '列名: ' + state.headers.join(', ') + '\n';
-  // IP summary
-  var ips = new Set();
-  state.rawData.forEach(function(r) { if (r.IP) ips.add(r.IP); });
-  ctx += 'IP数: ' + ips.size + ' (' + Array.from(ips).slice(0,15).join(', ') + '...)\n';
-  // Region summary
-  var regions = new Set();
-  state.rawData.forEach(function(r) { if (r['渠道']) regions.add(r['渠道']); });
-  ctx += '区域: ' + Array.from(regions).join(', ') + '\n';
-  // Category summary
-  var cats = new Set();
-  state.rawData.forEach(function(r) { if (r['分类']) cats.add(r['分类']); });
-  ctx += '分类: ' + Array.from(cats).join(', ') + '\n';
-  // Benchmark summary
-  var bmCols = getBMCols();
-  if (bmCols.length > 0) {
-    ctx += '标尺维度: ' + bmCols.join(', ') + '\n';
-  }
+  var ips = new Set(); state.rawData.forEach(function(r) { if (r.IP) ips.add(r.IP); });
+  var regions = new Set(); state.rawData.forEach(function(r) { if (r['渠道']) regions.add(r['渠道']); });
+  ctx += 'IP: ' + Array.from(ips).slice(0,20).join(',') + (ips.size>20?'等'+ips.size+'个':'') + '。';
+  ctx += '区域: ' + Array.from(regions).join(',') + '。';
   return ctx;
 }
 
@@ -1324,13 +1310,13 @@ async function sendChat() {
   var typing = document.createElement('div');
   typing.className = 'chat-msg ai';
   typing.id = 'typingIndicator';
-  typing.innerHTML = '<div class="chat-avatar">🤖</div><div class="chat-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+  typing.innerHTML = '<div class="chat-avatar">🤖</div><div class="chat-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div><div style="font-size:11px;color:#94a3b8;margin-top:4px;">AI正在分析数据，请稍候...</div></div>';
   container.appendChild(typing);
   container.scrollTop = container.scrollHeight;
 
   try {
     var dataCtx = getDataContext();
-    var systemPrompt = '你是APAC潮玩商品部的AI市场分析助手。你负责分析亚太市场（澳大利亚、新西兰、日本、韩国、泰国、新加坡、马来西亚、印尼、越南、菲律宾等）的玩具/盲盒/IP衍生品市场。\n\n你的能力：\n1. 分析各IP在不同区域的市场表现\n2. 提供市场趋势和消费者偏好洞察\n3. 结合文化、节日、体育赛事等因素分析市场机会\n4. 基于导入的销售数据给出订货建议\n\n回答风格：专业、简洁、有数据支撑。\n\n' + dataCtx;
+    var systemPrompt = '你是APAC潮玩商品部的Demand Planning分析师。你只负责销售预测和数据分析，不是市场部。\n\n规则：\n1. 只分析销售数据、需求预测、趋势判断\n2. 回答精简，直接给结论和数据依据\n3. 不要给营销策略、活动建议、开店规划等市场部的工作\n4. 结合导入的标尺数据给出订货量参考\n\n' + dataCtx;
 
     var messages = [
       { role: 'system', content: systemPrompt },
@@ -1344,7 +1330,7 @@ async function sendChat() {
     var resp = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({ model: model, messages: messages, temperature: 0.7, max_tokens: 2000 })
+      body: JSON.stringify({ model: model, messages: messages, temperature: 0.7, max_tokens: 800 })
     });
 
     var typingEl = document.getElementById('typingIndicator');
@@ -1386,6 +1372,28 @@ async function sendChat() {
   }
 }
 
+function copyMsg(idx) {
+  var text = chatState.messages[idx].content;
+  navigator.clipboard.writeText(text).then(function() {
+    showToast('已复制到剪贴板', 'success');
+  }).catch(function() {
+    // Fallback: select and copy
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('已复制', 'success');
+  });
+}
+
+function editMsg(idx) {
+  var text = chatState.messages[idx].content;
+  var input = document.getElementById('chatInput');
+  input.value = text;
+  input.focus();
+  showToast('内容已填入输入框，可编辑后重新发送', 'info');
+}
+
 function renderChatMessages() {
   var container = document.getElementById('chatMessages');
   var typingEl = document.getElementById('typingIndicator');
@@ -1394,7 +1402,7 @@ function renderChatMessages() {
   msgs.forEach(function(m) { m.remove(); });
   if (typingEl) container.appendChild(typingEl);
 
-  chatState.messages.forEach(function(m) {
+  chatState.messages.forEach(function(m, idx) {
     var div = document.createElement('div');
     div.className = 'chat-msg ' + m.role;
     var avatar = m.role === 'user' ? '👤' : '🤖';
@@ -1403,7 +1411,15 @@ function renderChatMessages() {
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>')
       .replace(/^- (.+)$/gm, '• $1');
-    div.innerHTML = '<div class="chat-avatar">' + avatar + '</div><div class="chat-bubble">' + content + '</div>';
+    var bubble = '<div class="chat-avatar">' + avatar + '</div><div class="chat-bubble">' + content;
+    if (m.role === 'ai') {
+      bubble += '<div style="margin-top:6px;font-size:10px;text-align:right;">' +
+        '<button onclick="copyMsg(' + idx + ')" style="border:none;background:none;color:#2563eb;cursor:pointer;font-size:10px;">📋 复制</button>' +
+        '<button onclick="editMsg(' + idx + ')" style="border:none;background:none;color:#7c3aed;cursor:pointer;font-size:10px;margin-left:4px;">✏️ 编辑</button>' +
+        '</div>';
+    }
+    bubble += '</div>';
+    div.innerHTML = bubble;
     container.appendChild(div);
   });
   container.scrollTop = container.scrollHeight;
