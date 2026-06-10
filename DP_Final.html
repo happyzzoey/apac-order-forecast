@@ -813,13 +813,14 @@ table tbody tr:last-child td { border-bottom: none; }
 
 
   <!-- ===== AI CHAT ===== -->
-  <div class="card" id="chatCard">
+  <div class="card hidden" id="chatCard">
     <div class="card-title"><span class="icon icon-purple">💬</span> AI 市场分析助手 <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">（基于导入数据 + AI大模型）</span></div>
     <div style="margin-bottom:12px;">
       <div class="form-row">
         <div class="form-group"><label>API地址</label><input type="text" id="chatApiUrl" placeholder="https://api.openai.com/v1/chat/completions"></div>
         <div class="form-group"><label>API Key</label><input type="password" id="chatApiKey" placeholder="sk-..."></div>
         <div class="form-group" style="flex:0 0 120px;"><label>模型</label><input type="text" id="chatModel" value="gpt-4o"></div>
+        <div class="form-group" style="justify-content:flex-end;"><label>&nbsp;</label><button class="btn btn-outline btn-sm" onclick="saveChatConfig()">💾 保存配置</button></div>
       </div>
     </div>
     <div class="chat-messages" id="chatMessages">
@@ -842,7 +843,7 @@ table tbody tr:last-child td { border-bottom: none; }
   </div>
 
 <footer class="footer">
-  <p>APAC DP需求预测 & AI分析工具 v3.0 · 数据仅在本地处理（AI模式除外） · 请确保数据安全</p>
+  <p>APAC DP预测 + AI分析 v4.2 · 数据仅在本地处理（AI模式除外） · 请确保数据安全</p>
 </footer>
 
 <!-- ===== TOAST CONTAINER ===== -->
@@ -1233,6 +1234,11 @@ function exportResult() {
 // ===== CHAT =====
 var chatState = { messages: [], loading: false };
 
+function saveChatConfig() {
+  saveChatSettings();
+  showToast('API配置已保存', 'success');
+}
+
 function loadChatSettings() {
   var s = loadSettings();
   if (s.apiUrl) document.getElementById('chatApiUrl').value = s.apiUrl;
@@ -1382,6 +1388,24 @@ function askQuick(type) {
   }
 }
 
+
+loadChatSettings();
+
+
+// ===== MODE SWITCH =====
+function switchMode(mode) {
+  document.querySelectorAll('.mode-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  var dpCards = ['filterCard', 'previewCard', 'resultCard'];
+  dpCards.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', mode !== 'dp');
+  });
+  var chatCard = document.getElementById('chatCard');
+  if (chatCard) chatCard.classList.toggle('hidden', mode !== 'chat');
+  if (mode === 'chat') loadChatSettings();
+}
 
 loadChatSettings();
 
