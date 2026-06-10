@@ -1359,9 +1359,17 @@ async function sendChat() {
   } catch (err) {
     var typingEl = document.getElementById('typingIndicator');
     if (typingEl) typingEl.remove();
-    chatState.messages.push({ role: 'ai', content: '❌ 请求失败: ' + err.message + '\n\n请检查API配置。' });
+    var errMsg = err.message || String(err);
+    if (errMsg.indexOf('Failed to fetch') >= 0) {
+      errMsg += '\n\n可能原因：\n1. API地址错误或无法访问\n2. CORS跨域限制（浏览器禁止请求）\n3. 网络连接问题\n\n请检查API地址是否正确，或按F12查看控制台详细错误。';
+    } else if (errMsg.indexOf('401') >= 0 || errMsg.indexOf('403') >= 0) {
+      errMsg += '\n\nAPI Key无效或已过期，请重新生成。';
+    } else if (errMsg.indexOf('404') >= 0) {
+      errMsg += '\n\nAPI地址不存在(404)，请检查地址是否正确。';
+    }
+    chatState.messages.push({ role: 'ai', content: '❌ 请求失败: ' + errMsg });
     renderChatMessages();
-    console.error(err);
+    console.error('[Chat] Error:', err);
   } finally {
     chatState.loading = false;
     document.getElementById('chatSendBtn').disabled = false;
