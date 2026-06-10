@@ -1235,8 +1235,12 @@ function exportResult() {
 var chatState = { messages: [], loading: false };
 
 function saveChatConfig() {
+  var apiUrl = document.getElementById('chatApiUrl').value.trim();
+  var apiKey = document.getElementById('chatApiKey').value.trim();
+  if (!apiUrl) { showToast('请填写API地址后再保存', 'error'); return; }
+  if (!apiKey) { showToast('请填写API Key后再保存', 'error'); return; }
   saveChatSettings();
-  showToast('API配置已保存', 'success');
+  showToast('✅ API配置已保存 (' + apiUrl.substring(0,25) + '...)', 'success');
 }
 
 function loadChatSettings() {
@@ -1290,11 +1294,17 @@ async function sendChat() {
   var msg = input.value.trim();
   if (!msg || chatState.loading) return;
 
-  var apiUrl = document.getElementById('chatApiUrl').value.trim();
-  var apiKey = document.getElementById('chatApiKey').value.trim();
-  var model = document.getElementById('chatModel').value.trim() || 'gpt-4o';
-
-  if (!apiUrl || !apiKey) { showToast('请先配置API地址和Key', 'error'); return; }
+  var urlEl = document.getElementById('chatApiUrl');
+  var keyEl = document.getElementById('chatApiKey');
+  var modelEl = document.getElementById('chatModel');
+  if (!urlEl || !keyEl) { showToast('页面元素缺失，请刷新重试', 'error'); return; }
+  var apiUrl = urlEl.value.trim();
+  var apiKey = keyEl.value.trim();
+  var model = (modelEl && modelEl.value.trim()) || 'gpt-4o';
+  console.log('[Chat] API URL:', apiUrl ? apiUrl.substring(0,30)+'...' : '(空)');
+  console.log('[Chat] API Key:', apiKey ? '已填写('+apiKey.length+'字符)' : '(空)');
+  if (!apiUrl) { showToast('请填写API地址', 'error'); return; }
+  if (!apiKey) { showToast('请填写API Key', 'error'); return; }
   saveChatSettings();
 
   chatState.messages.push({ role: 'user', content: msg });
