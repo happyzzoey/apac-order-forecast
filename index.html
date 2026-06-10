@@ -1335,8 +1335,10 @@ async function sendChat() {
     var messages = [
       { role: 'system', content: systemPrompt },
     ];
-    // Add last 10 messages for context
-    var recent = chatState.messages.slice(-10);
+    // Add last 10 messages, converting 'ai' role to 'assistant' for API
+    var recent = chatState.messages.slice(-10).map(function(m) {
+      return { role: m.role === 'ai' ? 'assistant' : m.role, content: m.content };
+    });
     messages = messages.concat(recent);
 
     var resp = await fetch(apiUrl, {
