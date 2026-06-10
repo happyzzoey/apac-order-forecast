@@ -1314,8 +1314,10 @@ async function sendChat() {
   document.getElementById('chatSendBtn').disabled = true;
 
   renderChatMessages();
-  document.getElementById('chatPlaceholder').style.display = 'none';
-  document.getElementById('chatQuickBtns').style.display = 'flex';
+  var ph = document.getElementById('chatPlaceholder');
+  if (ph) ph.style.display = 'none';
+  var qb = document.getElementById('chatQuickBtns');
+  if (qb) qb.style.display = 'flex';
 
   // Show typing
   var container = document.getElementById('chatMessages');
@@ -1380,7 +1382,9 @@ async function sendChat() {
 function renderChatMessages() {
   var container = document.getElementById('chatMessages');
   var typingEl = document.getElementById('typingIndicator');
-  container.innerHTML = '';
+  // Remove only chat messages, keep placeholder and typing
+  var msgs = container.querySelectorAll('.chat-msg');
+  msgs.forEach(function(m) { m.remove(); });
   if (typingEl) container.appendChild(typingEl);
 
   chatState.messages.forEach(function(m) {
