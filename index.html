@@ -1356,7 +1356,12 @@ async function sendChat() {
     }
 
     var data = await resp.json();
-    var reply = data.choices?.[0]?.message?.content || '(未收到回复)';
+    console.log('[Chat] Response:', JSON.stringify(data).substring(0, 300));
+    var reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    if (!reply && data.choices && data.choices[0]) {
+      reply = JSON.stringify(data.choices[0]);
+    }
+    if (!reply) reply = '(未收到回复，原始响应: ' + JSON.stringify(data).substring(0, 200) + ')';
     chatState.messages.push({ role: 'ai', content: reply });
     renderChatMessages();
 
