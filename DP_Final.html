@@ -795,6 +795,33 @@ table tbody tr:last-child td { border-bottom: none; }
     <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;" id="filterStatus"></div>
   </div>
 
+  <!-- ===== COEFFICIENT SETTINGS ===== -->
+  <div class="card hidden" id="coefCard">
+    <div class="card-title"><span class="icon icon-purple">📐</span> 系数设置</div>
+
+    <!-- Monthly Expansion Coefficient -->
+    <div style="border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;background:#fafafa;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <strong>📐 月度拓展系数</strong>
+        <span style="font-size:11px;color:var(--text-secondary);">固定值 · 上传一次持续使用至下次更新</span>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">每月相较1月的预估拓展倍数。例：2月=0.9即2月业绩是1月的0.9倍。</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('coefFileInput').click()">📥 上传系数Excel</button>
+        <input type="file" id="coefFileInput" accept=".xlsx,.xls" onchange="uploadCoefExcel(event)" style="display:none;">
+        <button class="btn btn-outline btn-sm" onclick="downloadCoefTemplate()">📋 下载模板</button>
+        <button class="btn btn-outline btn-sm" onclick="initCoef()">🔄 重置为1.0</button>
+        <span style="font-size:11px;color:var(--text-secondary);" id="coefStatus"></span>
+      </div>
+      <div class="table-wrapper" style="max-height:350px;">
+        <table id="coefTable" style="font-size:11px;"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <!-- Future coefficients will be added here -->
+    <div id="moreCoefs"></div>
+  </div>
+
   <!-- ===== DATA PREVIEW ===== -->
   <div class="card hidden" id="previewCard">
     <div class="card-title"><span class="icon icon-green">📋</span> 数据预览 <span style="font-size:11px;font-weight:400;color:var(--text-secondary);" id="rowCount"></span></div>
@@ -854,6 +881,7 @@ table tbody tr:last-child td { border-bottom: none; }
 <script>
 // ===== STATE =====
 var state = { rawData: null, headers: [], importFileName: null, importTime: null, tableFormat: 'simple' };
+var COEF = {}; // { '日本': {1:1.0, 2:0.9, ...}, ... }
 var _accRecords = [], _accFiles = [];
 
 // ===== HELPERS =====
@@ -915,7 +943,7 @@ function processFile(file) {
       state._fileNames = _accFiles.slice();
       state.tableFormat = (state.headers.indexOf('月份') >= 0) ? 'cross' : 'simple';
 
-      show('previewCard'); show('filterCard');
+      show('previewCard'); show('filterCard'); _showCoefWithFilter();
       renderPreview(); populateFilters();
       updateFileInfo();
       showToast('导入成功: ' + state.rawData.length + ' 条 (' + _accFiles.length + '个文件)', 'success');
@@ -1371,6 +1399,132 @@ async function sendChat() {
     document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
   }
 }
+
+
+// ===== MONTHLY EXPANSION COEFFICIENTS =====
+var FIXED_REGION = ['亚太','泰国','印尼','澳洲','新西兰','日本','韩国','马来西亚','新加披','菲律宾+文莱','卡塔尔','阿联酋','越南-VN'];
+
+function loadCoef() {
+  try {
+    var s = localStorage.getItem('dp_coef');
+    if (s) { COEF = JSON.parse(s); return; }
+  } catch(e) {}
+  COEF = {};
+}
+
+function saveCoef() {
+  // Read from table inputs
+  FIXED_REGION.forEach(function(reg) {
+    if (!COEF[reg]) COEF[reg] = {};
+    for (var m = 1; m <= 12; m++) {
+      var el = document.getElementById('coef_' + reg.replace(/[^a-zA-Z一-鿿]/g,'') + '_' + m);
+      if (el) {
+        var v = parseFloat(el.value);
+        COEF[reg][m] = (isNaN(v) || v <= 0) ? 1.0 : v;
+      }
+    }
+  });
+  localStorage.setItem('dp_coef', JSON.stringify(COEF));
+  document.getElementById('coefStatus').textContent = '✅ 已保存';
+  setTimeout(function() { var s = document.getElementById('coefStatus'); if (s) s.textContent = ''; }, 2000);
+}
+
+function initCoef() {
+  FIXED_REGION.forEach(function(reg) {
+    COEF[reg] = {};
+    for (var m = 1; m <= 12; m++) COEF[reg][m] = 1.0;
+  });
+  localStorage.setItem('dp_coef', JSON.stringify(COEF));
+  renderCoefTable();
+  document.getElementById('coefStatus').textContent = '✅ 已全部重置为1.0';
+}
+
+function renderCoefTable() {
+  var thead = document.querySelector('#coefTable thead');
+  var tbody = document.querySelector('#coefTable tbody');
+  if (!thead || !tbody) return;
+  thead.innerHTML = ''; tbody.innerHTML = '';
+
+  // Header
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<th>区域</th>' + [1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){
+    return '<th style="text-align:center;">' + m + '月</th>';
+  }).join('');
+  thead.appendChild(tr);
+
+  // Rows
+  FIXED_REGION.forEach(function(reg) {
+    if (!COEF[reg]) COEF[reg] = {};
+    var row = document.createElement('tr');
+    row.innerHTML = '<td style="font-weight:600;">' + reg + '</td>' + [1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){
+      var v = COEF[reg][m] !== undefined ? COEF[reg][m] : 1.0;
+      var id = 'coef_' + reg.replace(/[^a-zA-Z\u4e00-\u9fff]/g,'') + '_' + m;
+      return '<td><input type="number" id="' + id + '" value="' + v + '" step="0.01" min="0" style="width:60px;text-align:center;font-size:11px;padding:4px;border:1px solid var(--border);border-radius:4px;" onchange="this.style.background=(this.value!=1.0)?\'#fef3c7\':\'\'"></td>';
+    }).join('');
+    tbody.appendChild(row);
+  });
+}
+
+function uploadCoefExcel(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      var raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+      // Expected format: Row0 = header, Row1+ = [区域, 1月, 2月, ..., 12月]
+      for (var ri = 1; ri < raw.length; ri++) {
+        var row = raw[ri];
+        if (!row || !row[0]) continue;
+        var reg = String(row[0]).trim();
+        if (!COEF[reg]) COEF[reg] = {};
+        for (var m = 1; m <= 12; m++) {
+          var v = parseFloat(row[m]);
+          if (!isNaN(v) && v > 0) COEF[reg][m] = v;
+        }
+      }
+      localStorage.setItem('dp_coef', JSON.stringify(COEF));
+      renderCoefTable();
+      document.getElementById('coefStatus').textContent = '✅ 已导入 ' + file.name;
+    } catch(err) {
+      showToast('系数文件解析失败: ' + err.message, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function downloadCoefTemplate() {
+  var rows = [['区域','1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月']];
+  FIXED_REGION.forEach(function(reg) {
+    var row = [reg];
+    for (var m = 1; m <= 12; m++) row.push(COEF[reg] && COEF[reg][m] ? COEF[reg][m] : 1.0);
+    rows.push(row);
+  });
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '月度拓展系数');
+  XLSX.writeFile(wb, '月度拓展系数模板.xlsx');
+  showToast('模板已下载', 'success');
+}
+
+// Show coefCard when filterCard is shown
+var _origShowFilter = null;
+function _showCoefWithFilter() {
+  var coefCard = document.getElementById('coefCard');
+  if (coefCard && !coefCard.classList.contains('hidden')) return;
+  if (coefCard) { coefCard.classList.remove('hidden'); renderCoefTable(); }
+}
+
+function getCoefficient(region, month) {
+  if (!COEF[region] || COEF[region][month] === undefined) return 1.0;
+  return COEF[region][month];
+}
+
+// Load coefficients on init
+loadCoef();
+
 
 function copyMsg(idx) {
   var text = chatState.messages[idx].content;
