@@ -793,6 +793,23 @@ table tbody tr:last-child td { border-bottom: none; }
     </div>
     <datalist id="dlIP"></datalist><datalist id="dlCat1"></datalist><datalist id="dlCat2"></datalist><datalist id="dlRegion"></datalist><datalist id="dlProductLine"></datalist><datalist id="dlLaunch"></datalist>
     <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;" id="filterStatus"></div>
+    <div style="margin-top:4px;text-align:right;">
+      <button class="btn btn-outline btn-sm" onclick="toggleCoefCard()" id="coefToggleBtn">📐 月度拓展系数 (默认1.0) ▼</button>
+    </div>
+  </div>
+
+  <!-- ===== MONTHLY COEFFICIENTS ===== -->
+  <div class="card hidden" id="coefCard">
+    <div class="card-title"><span class="icon icon-purple">📐</span> 月度拓展系数</div>
+    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">每月相较1月的预估拓展倍数。每个区域独立设置。填完后点保存。</p>
+    <div style="margin-bottom:8px;display:flex;gap:8px;">
+      <button class="btn btn-outline btn-sm" onclick="initCoef()">🔄 全部重置为1.0</button>
+      <button class="btn btn-outline btn-sm" onclick="saveCoef()">💾 保存系数</button>
+      <span style="font-size:11px;color:var(--text-secondary);" id="coefStatus"></span>
+    </div>
+    <div class="table-wrapper" style="max-height:400px;">
+      <table id="coefTable" style="font-size:11px;"><thead></thead><tbody></tbody></table>
+    </div>
   </div>
 
   <!-- ===== DATA PREVIEW ===== -->
