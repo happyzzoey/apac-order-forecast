@@ -854,6 +854,7 @@ table tbody tr:last-child td { border-bottom: none; }
 <script>
 // ===== STATE =====
 var state = { rawData: null, headers: [], importFileName: null, importTime: null, tableFormat: 'simple' };
+var COEF = {}; // { '日本': {1:1.0, 2:0.9, ...}, ... }
 var _accRecords = [], _accFiles = [];
 
 // ===== HELPERS =====
@@ -1371,6 +1372,90 @@ async function sendChat() {
     document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
   }
 }
+
+
+// ===== MONTHLY EXPANSION COEFFICIENTS =====
+var FIXED_REGION = ['亚太','泰国','印尼','澳洲','新西兰','日本','韩国','马来西亚','新加披','菲律宾+文莱','卡塔尔','阿联酋','越南-VN'];
+
+function toggleCoefCard() {
+  var card = document.getElementById('coefCard');
+  var btn = document.getElementById('coefToggleBtn');
+  if (!card || !btn) return;
+  var show = card.classList.contains('hidden');
+  card.classList.toggle('hidden');
+  btn.textContent = '📐 月度拓展系数 (默认1.0) ' + (show ? '▲' : '▼');
+  if (show) renderCoefTable();
+}
+
+function loadCoef() {
+  try {
+    var s = localStorage.getItem('dp_coef');
+    if (s) { COEF = JSON.parse(s); return; }
+  } catch(e) {}
+  COEF = {};
+}
+
+function saveCoef() {
+  // Read from table inputs
+  FIXED_REGION.forEach(function(reg) {
+    if (!COEF[reg]) COEF[reg] = {};
+    for (var m = 1; m <= 12; m++) {
+      var el = document.getElementById('coef_' + reg.replace(/[^a-zA-Z一-鿿]/g,'') + '_' + m);
+      if (el) {
+        var v = parseFloat(el.value);
+        COEF[reg][m] = (isNaN(v) || v <= 0) ? 1.0 : v;
+      }
+    }
+  });
+  localStorage.setItem('dp_coef', JSON.stringify(COEF));
+  document.getElementById('coefStatus').textContent = '✅ 已保存';
+  setTimeout(function() { var s = document.getElementById('coefStatus'); if (s) s.textContent = ''; }, 2000);
+}
+
+function initCoef() {
+  FIXED_REGION.forEach(function(reg) {
+    COEF[reg] = {};
+    for (var m = 1; m <= 12; m++) COEF[reg][m] = 1.0;
+  });
+  localStorage.setItem('dp_coef', JSON.stringify(COEF));
+  renderCoefTable();
+  document.getElementById('coefStatus').textContent = '✅ 已全部重置为1.0';
+}
+
+function renderCoefTable() {
+  var thead = document.querySelector('#coefTable thead');
+  var tbody = document.querySelector('#coefTable tbody');
+  if (!thead || !tbody) return;
+  thead.innerHTML = ''; tbody.innerHTML = '';
+
+  // Header
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<th>区域</th>' + [1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){
+    return '<th style="text-align:center;">' + m + '月</th>';
+  }).join('');
+  thead.appendChild(tr);
+
+  // Rows
+  FIXED_REGION.forEach(function(reg) {
+    if (!COEF[reg]) COEF[reg] = {};
+    var row = document.createElement('tr');
+    row.innerHTML = '<td style="font-weight:600;">' + reg + '</td>' + [1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){
+      var v = COEF[reg][m] !== undefined ? COEF[reg][m] : 1.0;
+      var id = 'coef_' + reg.replace(/[^a-zA-Z\u4e00-\u9fff]/g,'') + '_' + m;
+      return '<td><input type="number" id="' + id + '" value="' + v + '" step="0.01" min="0" style="width:60px;text-align:center;font-size:11px;padding:4px;border:1px solid var(--border);border-radius:4px;" onchange="this.style.background=(this.value!=1.0)?\'#fef3c7\':\'\'"></td>';
+    }).join('');
+    tbody.appendChild(row);
+  });
+}
+
+function getCoefficient(region, month) {
+  if (!COEF[region] || COEF[region][month] === undefined) return 1.0;
+  return COEF[region][month];
+}
+
+// Load coefficients on init
+loadCoef();
+
 
 function copyMsg(idx) {
   var text = chatState.messages[idx].content;
