@@ -793,23 +793,33 @@ table tbody tr:last-child td { border-bottom: none; }
     </div>
     <datalist id="dlIP"></datalist><datalist id="dlCat1"></datalist><datalist id="dlCat2"></datalist><datalist id="dlRegion"></datalist><datalist id="dlProductLine"></datalist><datalist id="dlLaunch"></datalist>
     <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;" id="filterStatus"></div>
-    <div style="margin-top:4px;text-align:right;">
-      <button class="btn btn-outline btn-sm" onclick="toggleCoefCard()" id="coefToggleBtn">📐 月度拓展系数 (默认1.0) ▼</button>
-    </div>
   </div>
 
-  <!-- ===== MONTHLY COEFFICIENTS ===== -->
+  <!-- ===== COEFFICIENT SETTINGS ===== -->
   <div class="card hidden" id="coefCard">
-    <div class="card-title"><span class="icon icon-purple">📐</span> 月度拓展系数</div>
-    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">每月相较1月的预估拓展倍数。每个区域独立设置。填完后点保存。</p>
-    <div style="margin-bottom:8px;display:flex;gap:8px;">
-      <button class="btn btn-outline btn-sm" onclick="initCoef()">🔄 全部重置为1.0</button>
-      <button class="btn btn-outline btn-sm" onclick="saveCoef()">💾 保存系数</button>
-      <span style="font-size:11px;color:var(--text-secondary);" id="coefStatus"></span>
+    <div class="card-title"><span class="icon icon-purple">📐</span> 系数设置</div>
+
+    <!-- Monthly Expansion Coefficient -->
+    <div style="border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;background:#fafafa;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <strong>📐 月度拓展系数</strong>
+        <span style="font-size:11px;color:var(--text-secondary);">固定值 · 上传一次持续使用至下次更新</span>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">每月相较1月的预估拓展倍数。例：2月=0.9即2月业绩是1月的0.9倍。</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('coefFileInput').click()">📥 上传系数Excel</button>
+        <input type="file" id="coefFileInput" accept=".xlsx,.xls" onchange="uploadCoefExcel(event)" style="display:none;">
+        <button class="btn btn-outline btn-sm" onclick="downloadCoefTemplate()">📋 下载模板</button>
+        <button class="btn btn-outline btn-sm" onclick="initCoef()">🔄 重置为1.0</button>
+        <span style="font-size:11px;color:var(--text-secondary);" id="coefStatus"></span>
+      </div>
+      <div class="table-wrapper" style="max-height:350px;">
+        <table id="coefTable" style="font-size:11px;"><thead></thead><tbody></tbody></table>
+      </div>
     </div>
-    <div class="table-wrapper" style="max-height:400px;">
-      <table id="coefTable" style="font-size:11px;"><thead></thead><tbody></tbody></table>
-    </div>
+
+    <!-- Future coefficients will be added here -->
+    <div id="moreCoefs"></div>
   </div>
 
   <!-- ===== DATA PREVIEW ===== -->
@@ -933,7 +943,7 @@ function processFile(file) {
       state._fileNames = _accFiles.slice();
       state.tableFormat = (state.headers.indexOf('月份') >= 0) ? 'cross' : 'simple';
 
-      show('previewCard'); show('filterCard');
+      show('previewCard'); show('filterCard'); _showCoefWithFilter();
       renderPreview(); populateFilters();
       updateFileInfo();
       showToast('导入成功: ' + state.rawData.length + ' 条 (' + _accFiles.length + '个文件)', 'success');
@@ -1394,16 +1404,6 @@ async function sendChat() {
 // ===== MONTHLY EXPANSION COEFFICIENTS =====
 var FIXED_REGION = ['亚太','泰国','印尼','澳洲','新西兰','日本','韩国','马来西亚','新加披','菲律宾+文莱','卡塔尔','阿联酋','越南-VN'];
 
-function toggleCoefCard() {
-  var card = document.getElementById('coefCard');
-  var btn = document.getElementById('coefToggleBtn');
-  if (!card || !btn) return;
-  var show = card.classList.contains('hidden');
-  card.classList.toggle('hidden');
-  btn.textContent = '📐 月度拓展系数 (默认1.0) ' + (show ? '▲' : '▼');
-  if (show) renderCoefTable();
-}
-
 function loadCoef() {
   try {
     var s = localStorage.getItem('dp_coef');
@@ -1463,6 +1463,58 @@ function renderCoefTable() {
     }).join('');
     tbody.appendChild(row);
   });
+}
+
+function uploadCoefExcel(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      var raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+      // Expected format: Row0 = header, Row1+ = [区域, 1月, 2月, ..., 12月]
+      for (var ri = 1; ri < raw.length; ri++) {
+        var row = raw[ri];
+        if (!row || !row[0]) continue;
+        var reg = String(row[0]).trim();
+        if (!COEF[reg]) COEF[reg] = {};
+        for (var m = 1; m <= 12; m++) {
+          var v = parseFloat(row[m]);
+          if (!isNaN(v) && v > 0) COEF[reg][m] = v;
+        }
+      }
+      localStorage.setItem('dp_coef', JSON.stringify(COEF));
+      renderCoefTable();
+      document.getElementById('coefStatus').textContent = '✅ 已导入 ' + file.name;
+    } catch(err) {
+      showToast('系数文件解析失败: ' + err.message, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function downloadCoefTemplate() {
+  var rows = [['区域','1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月']];
+  FIXED_REGION.forEach(function(reg) {
+    var row = [reg];
+    for (var m = 1; m <= 12; m++) row.push(COEF[reg] && COEF[reg][m] ? COEF[reg][m] : 1.0);
+    rows.push(row);
+  });
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '月度拓展系数');
+  XLSX.writeFile(wb, '月度拓展系数模板.xlsx');
+  showToast('模板已下载', 'success');
+}
+
+// Show coefCard when filterCard is shown
+var _origShowFilter = null;
+function _showCoefWithFilter() {
+  var coefCard = document.getElementById('coefCard');
+  if (coefCard && !coefCard.classList.contains('hidden')) return;
+  if (coefCard) { coefCard.classList.remove('hidden'); renderCoefTable(); }
 }
 
 function getCoefficient(region, month) {
