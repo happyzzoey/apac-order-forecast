@@ -1142,7 +1142,8 @@ function doPredict() {
         var v = parseFloat(r[BM_COLS[monthIdx]]);
         if (!isNaN(v) && isFinite(v)) total += v;
       });
-      val = Math.round(total);
+      var coef = getCoefficient(fRegion || '全部', m);
+      val = Math.round(total * coef);
       isActive = true;
     }
     all12.push({ month: m + '月', value: val, isActive: isActive });
